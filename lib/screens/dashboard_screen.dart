@@ -56,37 +56,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        toolbarHeight: 104,
         titleSpacing: 0,
-        title: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: roleColor.withOpacity(0.2),
-              child: Text(user.fullName.isNotEmpty ? user.fullName.characters.first.toUpperCase() : '?', style: const TextStyle(color: Colors.white)),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Smart Scheduler', style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
-                  Text(greeting, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                  Text(user.fullName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        title: Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            children: [
+              CircleAvatar(
+                backgroundColor: roleColor.withOpacity(0.2),
+                child: Text(user.fullName.isNotEmpty ? user.fullName.characters.first.toUpperCase() : '?', style: const TextStyle(color: Colors.white)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Smart Scheduler', style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                    Text(greeting, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                    Text(user.fullName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18), maxLines: 1, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                         decoration: BoxDecoration(
                           color: roleColor.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(isStudent ? 'Student' : 'Faculty', style: TextStyle(color: roleColor, fontWeight: FontWeight.w700, fontSize: 11)),
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           IconButton(
@@ -146,7 +151,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   NavCard(
                     title: 'Drafts',
-                    icon: Icons.edit_note,
+                    icon: Icons.folder_open,
                     subtitle: 'Saved to finish',
                     meta: 'Pick up later',
                     accent: roleColor,
@@ -213,6 +218,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 decoration: const InputDecoration(
                   border: InputBorder.none,
                   hintText: 'Search classes, rooms, professors',
+                  contentPadding: EdgeInsets.symmetric(vertical: 10),
                 ),
                 onTap: () => Navigator.pushNamed(context, SearchFilterScreen.routeName),
                 readOnly: true,
@@ -222,6 +228,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onPressed: () => Navigator.pushNamed(context, SearchFilterScreen.routeName),
               icon: const Icon(Icons.filter_list),
               label: const Text('Filters'),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                visualDensity: VisualDensity.compact,
+                alignment: Alignment.center,
+              ),
             ),
           ],
         ),
@@ -253,8 +264,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   String _formatTime(BuildContext context, TimeOfDay t) {
-    final loc = MaterialLocalizations.of(context);
-    return loc.formatTimeOfDay(t, alwaysUse24HourFormat: false);
+    final hour = t.hour % 12 == 0 ? 12 : t.hour % 12;
+    final minute = t.minute;
+    final period = t.hour >= 12 ? 'PM' : 'AM';
+    if (minute == 0) return '$hour $period';
+    final minuteStr = minute.toString().padLeft(2, '0');
+    return '$hour:$minuteStr $period';
   }
 
   String _statusLabel(ClassModel c) {
