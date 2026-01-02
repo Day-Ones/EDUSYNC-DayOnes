@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 class StatCard extends StatelessWidget {
-  const StatCard({super.key, required this.title, required this.value, this.subtitle, this.icon});
+  const StatCard({super.key, required this.title, required this.value, this.subtitle, this.icon, this.trend, this.trendColor, this.actionLabel, this.onAction});
 
   final String title;
   final String value;
   final String? subtitle;
   final IconData? icon;
+  final String? trend;
+  final Color? trendColor;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +37,15 @@ class StatCard extends StatelessWidget {
                 children: [
                   Text(title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary)),
                   const SizedBox(height: 4),
-                  Text(value, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(value, style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w800, color: AppColors.textPrimary, height: 1.0)),
+                      const SizedBox(width: 8),
+                      if (trend != null)
+                        Text(trend!, style: TextStyle(color: trendColor ?? AppColors.accent, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 6),
                     Text(subtitle!, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary)),
@@ -41,6 +53,12 @@ class StatCard extends StatelessWidget {
                 ],
               ),
             ),
+            if (actionLabel != null)
+              OutlinedButton(
+                onPressed: onAction,
+                style: OutlinedButton.styleFrom(minimumSize: const Size(72, 36), padding: const EdgeInsets.symmetric(horizontal: 12)),
+                child: Text(actionLabel!),
+              ),
           ],
         ),
       ),
