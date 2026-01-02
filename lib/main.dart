@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:provider/provider.dart';
-import 'models/user.dart';
 import 'providers/auth_provider.dart';
 import 'providers/class_provider.dart';
-import 'providers/sync_provider.dart';
 import 'screens/add_edit_class_screen.dart';
 import 'screens/calendar_settings_screen.dart';
 import 'screens/conflict_resolution_screen.dart';
@@ -21,7 +18,6 @@ import 'screens/login_role_selection_screen.dart';
 import 'screens/role_selection_screen.dart';
 import 'screens/weekly_view_screen.dart';
 import 'services/auth_service.dart';
-import 'services/calendar_service.dart';
 import 'services/local_db_service.dart';
 import 'theme/app_theme.dart';
 
