@@ -1,0 +1,46 @@
+name: smart_scheduler
+description: Smart Scheduler with Google Calendar integration (frontend-only MVP)
+version: 0.1.0+1
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Google Calendar Integration
+  google_sign_in: ^6.2.1
+  googleapis: ^13.2.0
+  googleapis_auth: ^1.6.0
+  extension_google_sign_in_as_googleapis_auth: ^2.0.12
+
+  # Local Storage & Security
+  sqflite: ^2.3.0
+  path_provider: ^2.1.1
+  flutter_secure_storage: ^9.0.0
+  shared_preferences: ^2.2.2
+
+  # State Management
+  provider: ^6.1.1
+
+  # UI Components
+  table_calendar: ^3.0.9
+  intl: ^0.19.0
+  flutter_colorpicker: ^1.0.3
+
+  # Notifications
+  flutter_local_notifications: ^17.0.0
+  timezone: ^0.9.2
+
+  # Form validation
+  email_validator: ^2.1.17
+
+  # Misc
+  collection: ^1.18.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
