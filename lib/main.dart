@@ -17,6 +17,7 @@ import 'screens/profile_screen.dart';
 import 'screens/search_filter_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/login_role_selection_screen.dart';
 import 'screens/role_selection_screen.dart';
 import 'screens/weekly_view_screen.dart';
 import 'services/auth_service.dart';
@@ -28,27 +29,21 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-  final googleSignIn = GoogleSignIn(scopes: [
-    'email',
-    'https://www.googleapis.com/auth/calendar',
-  ]);
+  // Simplified initialization for testing
   final authService = AuthService(const FlutterSecureStorage());
   final dbService = LocalDbService();
-  final calendarService = CalendarService(googleSignIn);
-
+  
   runApp(SmartSchedulerApp(
     authService: authService,
     dbService: dbService,
-    calendarService: calendarService,
   ));
 }
 
 class SmartSchedulerApp extends StatelessWidget {
-  const SmartSchedulerApp({super.key, required this.authService, required this.dbService, required this.calendarService});
+  const SmartSchedulerApp({super.key, required this.authService, required this.dbService});
 
   final AuthService authService;
   final LocalDbService dbService;
-  final CalendarService calendarService;
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +51,7 @@ class SmartSchedulerApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider(authService)..bootstrap()),
         ChangeNotifierProvider(create: (_) => ClassProvider(dbService)),
-        ChangeNotifierProvider(create: (_) => SyncProvider(calendarService)),
+        // Temporarily removed SyncProvider to avoid Google Sign-In issues
       ],
       child: MaterialApp(
         title: 'Smart Scheduler',
@@ -65,8 +60,9 @@ class SmartSchedulerApp extends StatelessWidget {
         home: const SplashScreen(),
         routes: {
           RoleSelectionScreen.routeName: (_) => const RoleSelectionScreen(),
+          LoginRoleSelectionScreen.routeName: (_) => const LoginRoleSelectionScreen(),
           LoginScreen.routeName: (_) => const LoginScreen(),
-          SignUpScreen.routeName: (_) => const SignUpScreen(),
+          SignupScreen.routeName: (_) => const SignupScreen(),
           DashboardScreen.routeName: (_) => const DashboardScreen(),
           WeeklyViewScreen.routeName: (_) => const WeeklyViewScreen(),
           DailyViewScreen.routeName: (_) => const DailyViewScreen(),

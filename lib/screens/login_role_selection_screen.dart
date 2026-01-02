@@ -2,17 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/user.dart';
 import 'login_screen.dart';
-import 'signup_screen.dart';
-import 'login_role_selection_screen.dart';
 
-class RoleSelectionScreen extends StatelessWidget {
-  const RoleSelectionScreen({super.key});
-  static const routeName = '/select-role';
+class LoginRoleSelectionScreen extends StatelessWidget {
+  const LoginRoleSelectionScreen({super.key});
+  static const routeName = '/login-role-selection';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFE8E8E8), // Light gray background
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
@@ -38,10 +36,10 @@ class RoleSelectionScreen extends StatelessWidget {
               
               // Subtitle
               Text(
-                'Sign in to start your new session',
+                'Start Your Session',
                 style: GoogleFonts.albertSans(
                   fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600, // semibold
                   color: Colors.black,
                   letterSpacing: 0.2,
                 ),
@@ -62,24 +60,25 @@ class RoleSelectionScreen extends StatelessWidget {
               
               const SizedBox(height: 80),
               
-              // Log In Button
+              // Student Button
               SizedBox(
-                width: 222,
-                height: 47.9,
+                width: 300,
+                height: 50,
                 child: ElevatedButton(
                   onPressed: () => Navigator.pushNamed(
                     context,
-                    LoginRoleSelectionScreen.routeName,
+                    LoginScreen.routeName,
+                    arguments: const LoginArgs(UserType.student),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF257FCE),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(5), // 5px corner radius
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     elevation: 0,
                   ),
                   child: Text(
-                    'Log In',
+                    'Student',
                     style: GoogleFonts.albertSans(
                       fontSize: 20,
                       fontWeight: FontWeight.w600, // semibold
@@ -91,24 +90,25 @@ class RoleSelectionScreen extends StatelessWidget {
               
               const SizedBox(height: 16),
               
-              // Sign Up Button
+              // Faculty Button
               SizedBox(
-                width: 222,
-                height: 47.9,
+                width: 300,
+                height: 50,
                 child: ElevatedButton(
                   onPressed: () => Navigator.pushNamed(
                     context,
-                    SignupScreen.routeName,
+                    LoginScreen.routeName,
+                    arguments: const LoginArgs(UserType.faculty),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF257FCE),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(5), // 5px corner radius
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     elevation: 0,
                   ),
                   child: Text(
-                    'Sign up',
+                    'Faculty',
                     style: GoogleFonts.albertSans(
                       fontSize: 20,
                       fontWeight: FontWeight.w600, // semibold

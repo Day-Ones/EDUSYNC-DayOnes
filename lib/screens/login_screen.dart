@@ -1,6 +1,7 @@
 import 'package:email_validator/email_validator.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
@@ -40,119 +41,205 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pushNamedAndRemoveUntil(context, RoleSelectionScreen.routeName, (_) => false),
-        ),
-        title: Text(_role == UserType.student ? 'Student Login' : 'Faculty Login'),
-      ),
+      backgroundColor: const Color(0xFFE8E8E8), // Light gray background
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 26,
-                    backgroundColor: AppColors.primary.withOpacity(0.1),
-                    child: Icon(_role == UserType.student ? Icons.school : Icons.work_outline, color: AppColors.primary),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
+        child: Center(
+          child: Container(
+            margin: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(30),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: SingleChildScrollView(
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Title
+                    Text(
+                      _role == UserType.student ? 'Student Login' : 'Faculty Login',
+                      style: GoogleFonts.poppins(
+                        fontSize: 36,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF257FCE),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 8),
+                    
+                    // Subtitle
+                    Text(
+                      'Sign in to your account',
+                      style: GoogleFonts.albertSans(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 40),
+                    
+                    // Email Field
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(_role == UserType.student ? 'Access your student portal' : 'Access your faculty portal',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 4),
-                        const Text('Secure login with your institutional account.', style: TextStyle(color: AppColors.textSecondary)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
+                        Text(
+                          'Email',
+                          style: GoogleFonts.albertSans(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         TextFormField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.next,
-                          decoration: const InputDecoration(labelText: 'Email'),
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(5),
+                              borderSide: const BorderSide(color: Colors.grey),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(5),
+                              borderSide: const BorderSide(color: Colors.grey),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(5),
+                              borderSide: const BorderSide(color: Color(0xFF257FCE)),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                          ),
                           validator: (value) => EmailValidator.validate(value ?? '') ? null : 'Enter a valid email',
                         ),
-                        const SizedBox(height: 16),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Password Field
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Password',
+                          style: GoogleFonts.albertSans(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
                         TextFormField(
                           controller: _passwordController,
                           obscureText: _obscure,
                           textInputAction: TextInputAction.done,
                           decoration: InputDecoration(
-                            labelText: 'Password',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(5),
+                              borderSide: const BorderSide(color: Colors.grey),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(5),
+                              borderSide: const BorderSide(color: Colors.grey),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(5),
+                              borderSide: const BorderSide(color: Color(0xFF257FCE)),
+                            ),
                             suffixIcon: IconButton(
                               icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
                               onPressed: () => setState(() => _obscure = !_obscure),
                             ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                           ),
                           validator: (value) => (value ?? '').length >= 6 ? null : 'Password too short',
                         ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Checkbox(value: _remember, onChanged: (v) => setState(() => _remember = v ?? false)),
-                            const Text('Remember me'),
-                            const Spacer(),
-                            TextButton(onPressed: () {}, child: const Text('Forgot Password?')),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: auth.isLoading
-                                ? null
-                                : () async {
-                                    if (!_formKey.currentState!.validate()) return;
-                                    final err = await auth.login(
-                                      _emailController.text.trim(),
-                                      _passwordController.text,
-                                      role: _role,
-                                      remember: _remember,
-                                    );
-                                    if (err != null) {
-                                      if (!mounted) return;
-                                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
-                                    } else {
-                                      if (!mounted) return;
-                                      Navigator.pushReplacementNamed(context, DashboardScreen.routeName);
-                                    }
-                                  },
-                            child: auth.isLoading ? const CircularProgressIndicator(color: Colors.white) : const Text('Login'),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: () => Navigator.pushNamed(
-                            context,
-                            SignUpScreen.routeName,
-                            arguments: SignUpArgs(_role),
-                          ),
-                          child: Text(_role == UserType.student ? "Student Sign Up" : "Faculty Sign Up"),
-                        ),
                       ],
                     ),
-                  ),
+                    
+                    const SizedBox(height: 30),
+                    
+                    // Login Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: auth.isLoading
+                            ? null
+                            : () async {
+                                if (!_formKey.currentState!.validate()) return;
+                                final err = await auth.login(
+                                  _emailController.text.trim(),
+                                  _passwordController.text,
+                                  role: _role,
+                                  remember: _remember,
+                                );
+                                if (err != null) {
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+                                } else {
+                                  if (!mounted) return;
+                                  Navigator.pushReplacementNamed(context, DashboardScreen.routeName);
+                                }
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF257FCE),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: auth.isLoading 
+                            ? const CircularProgressIndicator(color: Colors.white) 
+                            : Text(
+                                'LOG IN',
+                                style: GoogleFonts.albertSans(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Sign Up Link
+                    TextButton(
+                      onPressed: () => Navigator.pushNamed(
+                        context,
+                        SignupScreen.routeName,
+                      ),
+                      child: Text(
+                        "Don't have an account? Sign Up",
+                        style: GoogleFonts.albertSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
