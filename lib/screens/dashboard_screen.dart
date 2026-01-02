@@ -55,6 +55,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         titleSpacing: 0,
         title: Row(
           children: [
@@ -67,7 +68,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('$greeting, ${user.fullName}', style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                  const Text('Smart Scheduler', style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                  Text(greeting, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  Text(user.fullName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18), maxLines: 1, overflow: TextOverflow.ellipsis),
                   Row(
                     children: [
                       Container(
@@ -78,8 +81,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         child: Text(isStudent ? 'Student' : 'Faculty', style: TextStyle(color: roleColor, fontWeight: FontWeight.w700, fontSize: 11)),
                       ),
-                      const SizedBox(width: 8),
-                      const Text('Smart Scheduler', style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
                     ],
                   ),
                 ],
@@ -144,10 +145,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     onTap: () => Navigator.pushNamed(context, DailyViewScreen.routeName),
                   ),
                   NavCard(
-                    title: isStudent ? 'Add Class' : 'Add Lecture',
-                    icon: Icons.add_box,
-                    subtitle: 'Create with alerts',
-                    meta: '2 mins',
+                    title: 'Drafts',
+                    icon: Icons.edit_note,
+                    subtitle: 'Saved to finish',
+                    meta: 'Pick up later',
                     accent: roleColor,
                     onTap: () => Navigator.pushNamed(context, AddEditClassScreen.routeName),
                   ),
@@ -217,9 +218,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 readOnly: true,
               ),
             ),
-            TextButton(
+            TextButton.icon(
               onPressed: () => Navigator.pushNamed(context, SearchFilterScreen.routeName),
-              child: const Text('Filters'),
+              icon: const Icon(Icons.filter_list),
+              label: const Text('Filters'),
             ),
           ],
         ),
