@@ -10,18 +10,38 @@ class RoleSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 32),
-              const Icon(Icons.calendar_month, size: 64, color: AppColors.primary),
-              const SizedBox(height: 12),
-              Text('Smart Scheduler', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 4),
-              const Text('Choose your role to continue', style: TextStyle(color: AppColors.textSecondary)),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.calendar_month, color: AppColors.primary, size: 28),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Smart Scheduler', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                      const Text('Choose your portal', style: TextStyle(color: AppColors.textSecondary)),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              Text('Who are you?', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              const Text('Select the experience tailored for your role.', style: TextStyle(color: AppColors.textSecondary)),
               const SizedBox(height: 24),
               Expanded(
                 child: GridView.count(
@@ -53,6 +73,8 @@ class RoleSelectionScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(height: 12),
+              const Text('Tip: You can switch roles anytime by signing out.', style: TextStyle(color: AppColors.textSecondary)),
             ],
           ),
         ),

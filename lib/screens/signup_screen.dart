@@ -39,6 +39,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -52,7 +53,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
           child: Form(
             key: _formKey,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 26,
+                      backgroundColor: AppColors.primary.withOpacity(0.1),
+                      child: Icon(_role == UserType.student ? Icons.school : Icons.work_outline, color: AppColors.primary),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_role == UserType.student ? 'Create your student account' : 'Create your faculty account',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 4),
+                        const Text('Takes less than a minute.', style: TextStyle(color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Chip(
@@ -70,6 +92,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         TextFormField(
                           controller: _name,
                           decoration: const InputDecoration(labelText: 'Full name'),
+                          textInputAction: TextInputAction.next,
                           validator: (v) => (v ?? '').isEmpty ? 'Enter your name' : null,
                         ),
                         const SizedBox(height: 12),
@@ -77,12 +100,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           controller: _email,
                           decoration: const InputDecoration(labelText: 'Email'),
                           keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
                           validator: (v) => EmailValidator.validate(v ?? '') ? null : 'Enter valid email',
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
                           controller: _password,
                           obscureText: _obscure,
+                          textInputAction: TextInputAction.next,
                           decoration: InputDecoration(
                             labelText: 'Password',
                             suffixIcon: IconButton(
@@ -96,6 +121,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         TextFormField(
                           controller: _id,
                           decoration: InputDecoration(labelText: _role == UserType.student ? 'Student ID (optional)' : 'Faculty ID (optional)'),
+                          textInputAction: TextInputAction.next,
                         ),
                         const SizedBox(height: 12),
                         TextFormField(

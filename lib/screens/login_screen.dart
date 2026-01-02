@@ -40,6 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -53,8 +54,27 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(_role == UserType.student ? 'Access your student portal' : 'Access your faculty portal',
-                  style: const TextStyle(color: AppColors.textSecondary)),
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 26,
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    child: Icon(_role == UserType.student ? Icons.school : Icons.work_outline, color: AppColors.primary),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_role == UserType.student ? 'Access your student portal' : 'Access your faculty portal',
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 4),
+                        const Text('Secure login with your institutional account.', style: TextStyle(color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 16),
               Card(
                 child: Padding(
@@ -66,6 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextFormField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
                           decoration: const InputDecoration(labelText: 'Email'),
                           validator: (value) => EmailValidator.validate(value ?? '') ? null : 'Enter a valid email',
                         ),
@@ -73,6 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         TextFormField(
                           controller: _passwordController,
                           obscureText: _obscure,
+                          textInputAction: TextInputAction.done,
                           decoration: InputDecoration(
                             labelText: 'Password',
                             suffixIcon: IconButton(
