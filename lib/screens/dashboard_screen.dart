@@ -191,25 +191,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 );
               }),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => Navigator.pushNamed(context, SearchFilterScreen.routeName),
-                      icon: const Icon(Icons.search),
-                      label: const Text('Search & Filter'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.pushNamed(context, WeeklyViewScreen.routeName),
-                      child: const Text('View All'),
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
         ),
@@ -254,12 +235,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   ClassModel? _nextClass(List<ClassModel> todays) {
+    if (todays.isEmpty) return null;
     final now = TimeOfDay.now();
     todays.sort((a, b) => _compareTime(a.startTime, b.startTime));
-    return todays.firstWhere(
-      (c) => _compareTime(c.startTime, now) > 0,
-      orElse: () => todays.isNotEmpty ? todays.first : null,
-    );
+    for (final c in todays) {
+      if (_compareTime(c.startTime, now) > 0) return c;
+    }
+    return todays.first;
   }
 
   int _compareTime(TimeOfDay a, TimeOfDay b) {
@@ -307,22 +289,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.pushNamed(context, AddEditClassScreen.routeName);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.today_outlined),
-                title: Text(isStudent ? 'Today view' : 'Today view'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, DailyViewScreen.routeName);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.calendar_month),
-                title: const Text('Weekly schedule'),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, WeeklyViewScreen.routeName);
                 },
               ),
             ],
