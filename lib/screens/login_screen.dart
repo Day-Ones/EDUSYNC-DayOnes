@@ -6,6 +6,7 @@ import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import 'dashboard_screen.dart';
 import 'signup_screen.dart';
+import 'role_selection_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -46,7 +47,14 @@ class _LoginScreenState extends State<LoginScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            // Try to pop, if it fails (after logout), go to role selection
+            if (!Navigator.canPop(context)) {
+              Navigator.pushNamedAndRemoveUntil(context, RoleSelectionScreen.routeName, (_) => false);
+            } else {
+              Navigator.pop(context);
+            }
+          },
         ),
       ),
       body: SafeArea(
