@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:characters/characters.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
@@ -63,7 +62,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Row(
             children: [
               CircleAvatar(
-                backgroundColor: roleColor.withOpacity(0.2),
+                backgroundColor: roleColor.withValues(alpha: 0.2),
                 child: Text(user.fullName.isNotEmpty ? user.fullName.characters.first.toUpperCase() : '?', style: const TextStyle(color: Colors.white)),
               ),
               const SizedBox(width: 12),
@@ -81,7 +80,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                         decoration: BoxDecoration(
-                          color: roleColor.withOpacity(0.15),
+                          color: roleColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(isStudent ? 'Student' : 'Faculty', style: TextStyle(color: roleColor, fontWeight: FontWeight.w700, fontSize: 11)),
@@ -113,7 +112,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSearchBar(context),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
+              // Weekly Timeline View
+              _buildWeeklyTimeline(context, classes),
+              const SizedBox(height: 20),
               StatCard(
                 title: isStudent ? 'Classes this week' : 'Lectures this week',
                 value: totalThisWeek.toString(),
@@ -161,37 +163,127 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     title: 'Google Sync',
                     icon: Icons.cloud_sync,
                     subtitle: 'Two-way calendar',
-                    meta: 'Last sync: –',
+                    meta: user.isGoogleCalendarConnected ? 'Connected' : 'Not connected',
                     accent: accentColor,
                     onTap: () => Navigator.pushNamed(context, CalendarSettingsScreen.routeName),
                   ),
                 ],
               ),
               const SizedBox(height: 20),
-              Text('Recent', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Recent Classes', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, fontSize: 16)),
+                  if (classes.isNotEmpty)
+                    TextButton(
+                      onPressed: () => Navigator.pushNamed(context, WeeklyViewScreen.routeName),
+                      child: const Text('See all', style: TextStyle(fontSize: 12)),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
               if (classes.isEmpty)
                 const Text('No classes yet. Tap + to add.', style: TextStyle(color: AppColors.textSecondary)),
               ...classes.take(4).map((c) {
                 final status = _statusLabel(c);
                 final statusColor = _statusColor(status);
+                final hasConflict = _hasConflict(c, classes);
                 return Card(
-                  child: ListTile(
-                    onTap: () => Navigator.pushNamed(context, DailyViewScreen.routeName),
-                    leading: CircleAvatar(backgroundColor: c.color, child: const Icon(Icons.book, color: Colors.white)),
-                    title: Text(c.name, style: const TextStyle(fontWeight: FontWeight.w700)),
-                    subtitle: Text('${_formatTime(context, c.startTime)} - ${_formatTime(context, c.endTime)} | ${c.location}'),
-                    trailing: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: hasConflict ? const BorderSide(color: AppColors.error, width: 2) : BorderSide.none,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(color: statusColor.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
-                          child: Text(status, style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.w700)),
+                        if (hasConflict)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.error.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(Icons.warning_rounded, size: 14, color: AppColors.error),
+                                  SizedBox(width: 4),
+                                  Text('Conflict detected', style: TextStyle(color: AppColors.error, fontSize: 11, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                            ),
+                          ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: c.color,
+                              child: c.syncWithGoogle
+                                  ? const Icon(Icons.cloud_done, color: Colors.white, size: 20)
+                                  : const Icon(Icons.book, color: Colors.white),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    c.name,
+                                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${_formatTime(context, c.startTime)} - ${_formatTime(context, c.endTime)}',
+                                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.location_on, size: 13, color: AppColors.textSecondary),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          c.location,
+                                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  if (c.instructorOrRoom.isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      c.instructorOrRoom,
+                                      style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+                                  child: Text(status, style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w700)),
+                                ),
+                                const SizedBox(height: 6),
+                                Text('${c.daysOfWeek.length}d/wk', style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                              ],
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 6),
-                        Text('${c.daysOfWeek.length} days/week', style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                       ],
                     ),
                   ),
@@ -238,6 +330,90 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildWeeklyTimeline(BuildContext context, List<ClassModel> classes) {
+    final days = ['M', 'T', 'W', 'Th', 'F', 'S', 'Su'];
+    final now = DateTime.now();
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('This Week', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 13)),
+            const SizedBox(height: 12),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: List.generate(7, (index) {
+                  final dayDate = startOfWeek.add(Duration(days: index));
+                  final isToday = isSameDay(dayDate, now);
+                  final dayClasses = classes.where((c) => c.daysOfWeek.contains(dayDate.weekday)).toList();
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: GestureDetector(
+                      onTap: () => Navigator.pushNamed(context, DailyViewScreen.routeName),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isToday ? const Color(0xFF257FCE).withValues(alpha: 0.1) : Colors.transparent,
+                          border: Border.all(color: isToday ? const Color(0xFF257FCE) : Colors.grey.shade300, width: isToday ? 2 : 1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(days[index], style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: isToday ? const Color(0xFF257FCE) : Colors.black87)),
+                            const SizedBox(height: 4),
+                            Text(dayDate.day.toString(), style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                            const SizedBox(height: 6),
+                            if (dayClasses.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF257FCE).withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text('${dayClasses.length}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF257FCE))),
+                              )
+                            else
+                              const Text('-', style: TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  bool _hasConflict(ClassModel c, List<ClassModel> allClasses) {
+    for (final other in allClasses) {
+      if (c.id == other.id) continue;
+      if (!c.daysOfWeek.any((day) => other.daysOfWeek.contains(day))) continue;
+      
+      final cStart = c.startTime.hour * 60 + c.startTime.minute;
+      final cEnd = c.endTime.hour * 60 + c.endTime.minute;
+      final oStart = other.startTime.hour * 60 + other.startTime.minute;
+      final oEnd = other.endTime.hour * 60 + other.endTime.minute;
+      
+      if (cStart < oEnd && cEnd > oStart) return true;
+    }
+    return false;
   }
 
   String _greeting() {
