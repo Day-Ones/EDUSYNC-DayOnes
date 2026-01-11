@@ -306,8 +306,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return todays.where((c) => _compareTime(c.startTime, now) > 0).length;
   }
 
-
-
   int _compareTime(TimeOfDay a, TimeOfDay b) {
     final aMinutes = a.hour * 60 + a.minute;
     final bMinutes = b.hour * 60 + b.minute;
@@ -318,10 +316,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final hour = t.hour % 12 == 0 ? 12 : t.hour % 12;
     final minute = t.minute;
     final period = t.hour >= 12 ? 'PM' : 'AM';
-    if (minute == 0) return '$hour $period';
+    if (minute == 0) return '$hour $PM';
     final minuteStr = minute.toString().padLeft(2, '0');
     return '$hour:$minuteStr $period';
   }
-
-
 }

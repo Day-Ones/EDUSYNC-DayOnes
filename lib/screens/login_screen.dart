@@ -6,6 +6,7 @@ import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import 'dashboard_screen.dart';
 import 'signup_screen.dart';
+import 'role_selection_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -40,6 +41,22 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = context.watch<AuthProvider>();
     return Scaffold(
       backgroundColor: const Color(0xFFE8E8E8), // Light gray background
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () {
+            // Try to pop, if it fails (after logout), go to role selection
+            if (!Navigator.canPop(context)) {
+              Navigator.pushNamedAndRemoveUntil(context, RoleSelectionScreen.routeName, (_) => false);
+            } else {
+              Navigator.pop(context);
+            }
+          },
+        ),
+      ),
       body: SafeArea(
         child: Center(
           child: Container(
