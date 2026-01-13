@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/location_provider.dart';
 import '../theme/app_theme.dart';
 import 'login_screen.dart';
 
@@ -270,6 +271,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   );
                   if (confirm == true) {
+                    // Clean up location provider
+                    if (context.mounted) {
+                      context.read<LocationProvider>().onLogout();
+                    }
                     await auth.logout();
                     if (!context.mounted) return;
                     Navigator.pushNamedAndRemoveUntil(context, LoginScreen.routeName, (_) => false);

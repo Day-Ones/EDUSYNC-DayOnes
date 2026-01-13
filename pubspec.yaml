@@ -41,6 +41,9 @@ dependencies:
   collection: ^1.18.0
   google_fonts: ^6.1.0
 
+  # Location
+  geolocator: ^11.0.0
+
 flutter:
   uses-material-design: true
   assets:

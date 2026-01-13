@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../models/class.dart';
 import '../models/user.dart';
 
 class CalendarService {

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/user.dart';
+import '../models/class.dart';
 import '../theme/app_theme.dart';
 
 class ClassCard extends StatelessWidget {

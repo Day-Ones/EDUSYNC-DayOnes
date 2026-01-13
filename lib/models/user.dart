@@ -1,6 +1,4 @@
-import 'package:flutter/material.dart';
-
-enum UserType { student, faculty }
+﻿enum UserType { student, faculty }
 
 class UserModel {
   UserModel({
@@ -46,94 +44,39 @@ class UserModel {
       facultyId: facultyId ?? this.facultyId,
       department: department ?? this.department,
       googleAccountEmail: googleAccountEmail ?? this.googleAccountEmail,
-      isGoogleCalendarConnected:
-          isGoogleCalendarConnected ?? this.isGoogleCalendarConnected,
+      isGoogleCalendarConnected: isGoogleCalendarConnected ?? this.isGoogleCalendarConnected,
       createdAt: createdAt,
     );
   }
-}
 
-class AlertModel {
-  AlertModel({required this.timeBefore, required this.isEnabled});
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'email': email,
+    'fullName': fullName,
+    'userType': userType.name,
+    'studentId': studentId,
+    'facultyId': facultyId,
+    'department': department,
+    'googleAccountEmail': googleAccountEmail,
+    'isGoogleCalendarConnected': isGoogleCalendarConnected,
+    'createdAt': createdAt.toIso8601String(),
+  };
 
-  final Duration timeBefore;
-  final bool isEnabled;
-}
-
-class ClassModel {
-  ClassModel({
-    required this.id,
-    required this.userId,
-    required this.name,
-    required this.daysOfWeek,
-    required this.startTime,
-    required this.endTime,
-    required this.instructorOrRoom,
-    required this.location,
-    required this.notes,
-    required this.color,
-    required this.alerts,
-    this.googleEventId,
-    this.lastSyncedAt,
-    this.syncWithGoogle = false,
-    this.isModifiedLocally = false,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  })  : createdAt = createdAt ?? DateTime.now(),
-        updatedAt = updatedAt ?? DateTime.now();
-
-  final String id;
-  final String userId;
-  final String name;
-  final List<int> daysOfWeek;
-  final TimeOfDay startTime;
-  final TimeOfDay endTime;
-  final String instructorOrRoom;
-  final String location;
-  final String notes;
-  final Color color;
-  final List<AlertModel> alerts;
-  final String? googleEventId;
-  final DateTime? lastSyncedAt;
-  final bool syncWithGoogle;
-  final bool isModifiedLocally;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-
-  ClassModel copyWith({
-    String? name,
-    List<int>? daysOfWeek,
-    TimeOfDay? startTime,
-    TimeOfDay? endTime,
-    String? instructorOrRoom,
-    String? location,
-    String? notes,
-    Color? color,
-    List<AlertModel>? alerts,
-    String? googleEventId,
-    DateTime? lastSyncedAt,
-    bool? syncWithGoogle,
-    bool? isModifiedLocally,
-    DateTime? updatedAt,
-  }) {
-    return ClassModel(
-      id: id,
-      userId: userId,
-      name: name ?? this.name,
-      daysOfWeek: daysOfWeek ?? this.daysOfWeek,
-      startTime: startTime ?? this.startTime,
-      endTime: endTime ?? this.endTime,
-      instructorOrRoom: instructorOrRoom ?? this.instructorOrRoom,
-      location: location ?? this.location,
-      notes: notes ?? this.notes,
-      color: color ?? this.color,
-      alerts: alerts ?? this.alerts,
-      googleEventId: googleEventId ?? this.googleEventId,
-      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
-      syncWithGoogle: syncWithGoogle ?? this.syncWithGoogle,
-      isModifiedLocally: isModifiedLocally ?? this.isModifiedLocally,
-      createdAt: createdAt,
-      updatedAt: updatedAt ?? DateTime.now(),
+  factory UserModel.fromMap(Map<String, dynamic> map) {
+    return UserModel(
+      id: map['id'] as String,
+      email: map['email'] as String,
+      fullName: map['fullName'] as String,
+      userType: map['userType'] == 'faculty' ? UserType.faculty : UserType.student,
+      studentId: map['studentId'] as String?,
+      facultyId: map['facultyId'] as String?,
+      department: map['department'] as String?,
+      googleAccountEmail: map['googleAccountEmail'] as String?,
+      isGoogleCalendarConnected: (map['isGoogleCalendarConnected'] as bool?) ?? false,
+      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
     );
   }
+
+  Map<String, dynamic> toJson() => toMap();
+  factory UserModel.fromJson(Map<String, dynamic> json) => UserModel.fromMap(json);
 }

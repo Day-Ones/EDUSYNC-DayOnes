@@ -1,0 +1,312 @@
+import 'dart:math';
+import 'package:flutter/material.dart';
+
+/// Represents an alert/reminder for a class
+class AlertModel {
+  AlertModel({
+    required this.timeBefore,
+    required this.isEnabled,
+  });
+
+  final Duration timeBefore;
+  final bool isEnabled;
+
+  AlertModel copyWith({
+    Duration? timeBefore,
+    bool? isEnabled,
+  }) {
+    return AlertModel(
+      timeBefore: timeBefore ?? this.timeBefore,
+      isEnabled: isEnabled ?? this.isEnabled,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'timeBeforeMinutes': timeBefore.inMinutes,
+    'isEnabled': isEnabled,
+  };
+
+  factory AlertModel.fromMap(Map<String, dynamic> map) {
+    return AlertModel(
+      timeBefore: Duration(minutes: map['timeBeforeMinutes'] as int),
+      isEnabled: map['isEnabled'] as bool? ?? true,
+    );
+  }
+
+  Map<String, dynamic> toJson() => toMap();
+  factory AlertModel.fromJson(Map<String, dynamic> json) => AlertModel.fromMap(json);
+}
+
+/// Represents a campus location with building and room information
+class CampusLocationModel {
+  CampusLocationModel({
+    required this.name,
+    required this.latitude,
+    required this.longitude,
+    this.building,
+    this.room,
+  });
+
+  final String name;
+  final double latitude;
+  final double longitude;
+  final String? building;
+  final String? room;
+
+  CampusLocationModel copyWith({
+    String? name,
+    double? latitude,
+    double? longitude,
+    String? building,
+    String? room,
+  }) {
+    return CampusLocationModel(
+      name: name ?? this.name,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      building: building ?? this.building,
+      room: room ?? this.room,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'name': name,
+    'latitude': latitude,
+    'longitude': longitude,
+    'building': building,
+    'room': room,
+  };
+
+  factory CampusLocationModel.fromMap(Map<String, dynamic> map) {
+    return CampusLocationModel(
+      name: map['name'] as String,
+      latitude: (map['latitude'] as num).toDouble(),
+      longitude: (map['longitude'] as num).toDouble(),
+      building: map['building'] as String?,
+      room: map['room'] as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => toMap();
+  factory CampusLocationModel.fromJson(Map<String, dynamic> json) => CampusLocationModel.fromMap(json);
+}
+
+/// Represents a class/course in the system
+class ClassModel {
+  ClassModel({
+    required this.id,
+    required this.userId,
+    required this.name,
+    required this.daysOfWeek,
+    required this.startTime,
+    required this.endTime,
+    required this.instructorOrRoom,
+    required this.location,
+    required this.notes,
+    required this.color,
+    required this.alerts,
+    required this.syncWithGoogle,
+    required this.isModifiedLocally,
+    this.lastSyncedAt,
+    this.inviteCode,
+    this.facultyId,
+    this.facultyName,
+    this.campusLocation,
+    this.enrolledStudentIds = const [],
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  })  : createdAt = createdAt ?? DateTime.now(),
+        updatedAt = updatedAt ?? DateTime.now();
+
+  final String id;
+  final String userId;
+  final String name;
+  final List<int> daysOfWeek; // 1 = Monday, 7 = Sunday
+  final TimeOfDay startTime;
+  final TimeOfDay endTime;
+  final String instructorOrRoom;
+  final String location;
+  final String notes;
+  final Color color;
+  final List<AlertModel> alerts;
+  final bool syncWithGoogle;
+  final bool isModifiedLocally;
+  final DateTime? lastSyncedAt;
+  final String? inviteCode;
+  final String? facultyId;
+  final String? facultyName;
+  final CampusLocationModel? campusLocation;
+  final List<String> enrolledStudentIds;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  /// Generate a random 6-character invite code
+  static String generateInviteCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = Random();
+    return List.generate(6, (_) => chars[random.nextInt(chars.length)]).join();
+  }
+
+  ClassModel copyWith({
+    String? name,
+    List<int>? daysOfWeek,
+    TimeOfDay? startTime,
+    TimeOfDay? endTime,
+    String? instructorOrRoom,
+    String? location,
+    String? notes,
+    Color? color,
+    List<AlertModel>? alerts,
+    bool? syncWithGoogle,
+    bool? isModifiedLocally,
+    DateTime? lastSyncedAt,
+    String? inviteCode,
+    String? facultyId,
+    String? facultyName,
+    CampusLocationModel? campusLocation,
+    List<String>? enrolledStudentIds,
+    DateTime? updatedAt,
+  }) {
+    return ClassModel(
+      id: id,
+      userId: userId,
+      name: name ?? this.name,
+      daysOfWeek: daysOfWeek ?? this.daysOfWeek,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      instructorOrRoom: instructorOrRoom ?? this.instructorOrRoom,
+      location: location ?? this.location,
+      notes: notes ?? this.notes,
+      color: color ?? this.color,
+      alerts: alerts ?? this.alerts,
+      syncWithGoogle: syncWithGoogle ?? this.syncWithGoogle,
+      isModifiedLocally: isModifiedLocally ?? this.isModifiedLocally,
+      lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
+      inviteCode: inviteCode ?? this.inviteCode,
+      facultyId: facultyId ?? this.facultyId,
+      facultyName: facultyName ?? this.facultyName,
+      campusLocation: campusLocation ?? this.campusLocation,
+      enrolledStudentIds: enrolledStudentIds ?? this.enrolledStudentIds,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'id': id,
+    'userId': userId,
+    'name': name,
+    'daysOfWeek': daysOfWeek,
+    'startHour': startTime.hour,
+    'startMinute': startTime.minute,
+    'endHour': endTime.hour,
+    'endMinute': endTime.minute,
+    'instructorOrRoom': instructorOrRoom,
+    'location': location,
+    'notes': notes,
+    'color': color.value,
+    'alerts': alerts.map((a) => a.toMap()).toList(),
+    'syncWithGoogle': syncWithGoogle,
+    'isModifiedLocally': isModifiedLocally,
+    'lastSyncedAt': lastSyncedAt?.toIso8601String(),
+    'inviteCode': inviteCode,
+    'facultyId': facultyId,
+    'facultyName': facultyName,
+    'campusLocation': campusLocation?.toMap(),
+    'enrolledStudentIds': enrolledStudentIds,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+  };
+
+  factory ClassModel.fromMap(Map<String, dynamic> map) {
+    return ClassModel(
+      id: map['id'] as String,
+      userId: map['userId'] as String,
+      name: map['name'] as String,
+      daysOfWeek: List<int>.from(map['daysOfWeek'] as List<dynamic>),
+      startTime: TimeOfDay(
+        hour: map['startHour'] as int,
+        minute: map['startMinute'] as int,
+      ),
+      endTime: TimeOfDay(
+        hour: map['endHour'] as int,
+        minute: map['endMinute'] as int,
+      ),
+      instructorOrRoom: map['instructorOrRoom'] as String? ?? '',
+      location: map['location'] as String? ?? '',
+      notes: map['notes'] as String? ?? '',
+      color: Color(map['color'] as int),
+      alerts: (map['alerts'] as List<dynamic>?)
+          ?.map((e) => AlertModel.fromMap(e as Map<String, dynamic>))
+          .toList() ?? [],
+      syncWithGoogle: map['syncWithGoogle'] as bool? ?? false,
+      isModifiedLocally: map['isModifiedLocally'] as bool? ?? false,
+      lastSyncedAt: map['lastSyncedAt'] != null 
+          ? DateTime.tryParse(map['lastSyncedAt'] as String)
+          : null,
+      inviteCode: map['inviteCode'] as String?,
+      facultyId: map['facultyId'] as String?,
+      facultyName: map['facultyName'] as String?,
+      campusLocation: map['campusLocation'] != null
+          ? CampusLocationModel.fromMap(map['campusLocation'] as Map<String, dynamic>)
+          : null,
+      enrolledStudentIds: List<String>.from(map['enrolledStudentIds'] as List<dynamic>? ?? []),
+      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
+      updatedAt: DateTime.tryParse(map['updatedAt'] as String? ?? '') ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => toMap();
+  factory ClassModel.fromJson(Map<String, dynamic> json) => ClassModel.fromMap(json);
+
+  /// Check if this class conflicts with another class
+  bool conflictsWith(ClassModel other) {
+    // Check if days overlap
+    final daysOverlap = daysOfWeek.any((d) => other.daysOfWeek.contains(d));
+    if (!daysOverlap) return false;
+
+    // Check time overlap
+    final thisStart = startTime.hour * 60 + startTime.minute;
+    final thisEnd = endTime.hour * 60 + endTime.minute;
+    final otherStart = other.startTime.hour * 60 + other.startTime.minute;
+    final otherEnd = other.endTime.hour * 60 + other.endTime.minute;
+
+    return thisStart < otherEnd && thisEnd > otherStart;
+  }
+}
+
+/// Predefined campus locations for selection
+class PredefinedCampuses {
+  static final List<CampusLocationModel> campuses = [
+    CampusLocationModel(
+      name: 'Main Campus',
+      latitude: 37.7749,
+      longitude: -122.4194,
+      building: 'Main Building',
+    ),
+    CampusLocationModel(
+      name: 'North Campus',
+      latitude: 37.7849,
+      longitude: -122.4094,
+      building: 'North Hall',
+    ),
+    CampusLocationModel(
+      name: 'South Campus',
+      latitude: 37.7649,
+      longitude: -122.4294,
+      building: 'South Building',
+    ),
+    CampusLocationModel(
+      name: 'East Campus',
+      latitude: 37.7749,
+      longitude: -122.4094,
+      building: 'East Center',
+    ),
+    CampusLocationModel(
+      name: 'West Campus',
+      latitude: 37.7749,
+      longitude: -122.4294,
+      building: 'West Tower',
+    ),
+  ];
+}

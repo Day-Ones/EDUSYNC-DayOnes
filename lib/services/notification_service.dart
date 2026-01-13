@@ -1,5 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import '../models/user.dart';
+import '../models/class.dart';
 
 class NotificationService {
   NotificationService(this._plugin);

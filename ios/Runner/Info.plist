@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Smart Scheduler needs your location to show your proximity to campus for students.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Smart Scheduler needs your location to share your campus proximity status with students even when the app is in the background.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Smart Scheduler needs your location to share your campus proximity status with students.</string>
 </dict>
 </plist>

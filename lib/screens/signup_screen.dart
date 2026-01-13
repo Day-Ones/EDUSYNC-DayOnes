@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
+import '../models/user.dart';
+import '../providers/auth_provider.dart';
+import 'dashboard_screen.dart';
 import 'role_selection_screen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -18,10 +22,14 @@ class _SignupScreenState extends State<SignupScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _studentIdController = TextEditingController();
+  final _facultyIdController = TextEditingController();
+  final _departmentController = TextEditingController();
   
   DateTime? _selectedDate;
   String? _selectedGender;
   bool _hasMiddleName = true;
+  UserType _selectedRole = UserType.student;
 
   @override
   void dispose() {
@@ -31,6 +39,9 @@ class _SignupScreenState extends State<SignupScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _studentIdController.dispose();
+    _facultyIdController.dispose();
+    _departmentController.dispose();
     super.dispose();
   }
 
@@ -48,12 +59,39 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
-  void _createAccount() {
-    if (_formKey.currentState!.validate()) {
-      // Handle account creation logic here
+  Future<void> _createAccount() async {
+    if (!_formKey.currentState!.validate()) return;
+    
+    final auth = context.read<AuthProvider>();
+    
+    // Build full name
+    String fullName = _firstNameController.text.trim();
+    if (_hasMiddleName && _middleNameController.text.isNotEmpty) {
+      fullName += ' ${_middleNameController.text.trim()}';
+    }
+    fullName += ' ${_lastNameController.text.trim()}';
+    
+    final error = await auth.signup(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+      fullName: fullName,
+      userType: _selectedRole,
+      studentId: _selectedRole == UserType.student ? _studentIdController.text.trim() : null,
+      facultyId: _selectedRole == UserType.faculty ? _facultyIdController.text.trim() : null,
+      department: _departmentController.text.trim().isNotEmpty ? _departmentController.text.trim() : null,
+    );
+    
+    if (!mounted) return;
+    
+    if (error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), backgroundColor: Colors.red),
+      );
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Account created successfully!')),
       );
+      Navigator.pushReplacementNamed(context, DashboardScreen.routeName);
     }
   }
 
@@ -320,6 +358,111 @@ class _SignupScreenState extends State<SignupScreen> {
                     
                     const SizedBox(height: 16),
                     
+                    // Role Selection
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'I am a:',
+                          style: GoogleFonts.albertSans(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: RadioListTile<UserType>(
+                                title: Text(
+                                  'Student',
+                                  style: GoogleFonts.albertSans(fontSize: 16),
+                                ),
+                                value: UserType.student,
+                                groupValue: _selectedRole,
+                                onChanged: (value) {
+                                  setState(() => _selectedRole = value!);
+                                },
+                                activeColor: const Color(0xFF257FCE),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                            Expanded(
+                              child: RadioListTile<UserType>(
+                                title: Text(
+                                  'Faculty',
+                                  style: GoogleFonts.albertSans(fontSize: 16),
+                                ),
+                                value: UserType.faculty,
+                                groupValue: _selectedRole,
+                                onChanged: (value) {
+                                  setState(() => _selectedRole = value!);
+                                },
+                                activeColor: const Color(0xFF257FCE),
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Student ID or Faculty ID Field
+                    TextFormField(
+                      controller: _selectedRole == UserType.student 
+                          ? _studentIdController 
+                          : _facultyIdController,
+                      decoration: InputDecoration(
+                        labelText: _selectedRole == UserType.student 
+                            ? 'Student ID' 
+                            : 'Faculty ID',
+                        labelStyle: GoogleFonts.albertSans(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your ${_selectedRole == UserType.student ? 'Student' : 'Faculty'} ID';
+                        }
+                        return null;
+                      },
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Department Field
+                    TextFormField(
+                      controller: _departmentController,
+                      decoration: InputDecoration(
+                        labelText: _selectedRole == UserType.student 
+                            ? 'Department / Major' 
+                            : 'Department',
+                        labelStyle: GoogleFonts.albertSans(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
                     // Email Field
                     TextFormField(
                       controller: _emailController,
@@ -417,21 +560,23 @@ class _SignupScreenState extends State<SignupScreen> {
                     SizedBox(
                       width: double.infinity,
                       height: 50,
-                      child: ElevatedButton(
-                        onPressed: _createAccount,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF257FCE),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                      child: Consumer<AuthProvider>(
+                        builder: (context, auth, child) => ElevatedButton(
+                          onPressed: auth.isLoading ? null : _createAccount,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF257FCE),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            elevation: 0,
                           ),
-                          elevation: 0,
-                        ),
-                        child: Text(
-                          'Create Account',
-                          style: GoogleFonts.albertSans(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                          child: Text(
+                            'Create Account',
+                            style: GoogleFonts.albertSans(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ),
