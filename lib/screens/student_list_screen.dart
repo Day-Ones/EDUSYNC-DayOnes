@@ -63,12 +63,28 @@ class _StudentListScreenState extends State<StudentListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Students', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
         backgroundColor: classModel.color,
-        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white24,
+              ),
+              child: const Icon(
+                Icons.chevron_left,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.qr_code),
+            icon: const Icon(Icons.qr_code, color: Colors.white),
             tooltip: 'Check Attendance',
             onPressed: () => _showQrCodeDialog(context, classModel, attendanceProvider),
           ),
