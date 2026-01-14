@@ -7,11 +7,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/location.dart';
 import '../models/user.dart';
 import '../services/location_service.dart';
+import '../services/faculty_tracking_service.dart';
 
 class LocationProvider extends ChangeNotifier {
   LocationProvider(this._locationService);
 
   final LocationService _locationService;
+  final FacultyTrackingService _trackingService = FacultyTrackingService();
   
   bool _isSharing = false;
   bool _hasPermission = false;
@@ -128,7 +130,12 @@ class LocationProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('location_sharing_$_currentUserId', true);
       
-      // Start tracking
+      // Start tracking with FacultyTrackingService (updates Firestore)
+      if (_currentUserId != null) {
+        await _trackingService.startTracking(_currentUserId!);
+      }
+      
+      // Also start local tracking for UI updates
       await _locationService.startTracking((position) {
         _currentPosition = position;
         _updateFacultyLocation(position);
@@ -153,6 +160,7 @@ class LocationProvider extends ChangeNotifier {
   Future<void> stopSharing() async {
     _isSharing = false;
     _locationService.stopTracking();
+    _trackingService.stopTracking();
     
     // Save preference
     final prefs = await SharedPreferences.getInstance();
