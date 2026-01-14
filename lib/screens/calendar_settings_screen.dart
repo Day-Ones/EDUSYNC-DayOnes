@@ -3,8 +3,6 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/class_provider.dart';
 import '../providers/sync_provider.dart';
-import '../services/calendar_service.dart';
-import '../theme/app_theme.dart';
 
 class CalendarSettingsScreen extends StatelessWidget {
   const CalendarSettingsScreen({super.key});

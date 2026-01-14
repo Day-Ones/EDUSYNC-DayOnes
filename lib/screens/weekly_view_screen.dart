@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
-import '../models/user.dart';
+import '../models/class.dart';
 import '../providers/class_provider.dart';
 import '../widgets/class_card.dart';
 

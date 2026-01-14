@@ -1,15 +1,63 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/user.dart';
+import '../models/class.dart';
+import '../models/schedule.dart';
 import '../theme/app_theme.dart';
 
 class LocalDbService {
   static const _keyClasses = 'classes_storage_v1';
+  static const _keySchedules = 'schedules_storage_v1';
 
   Future<List<ClassModel>> loadClasses(String userId) async {
     final all = await _loadAll();
     return all.where((c) => c.userId == userId).toList();
+  }
+
+  // Load classes where student is enrolled
+  Future<List<ClassModel>> loadEnrolledClasses(String studentId) async {
+    final all = await _loadAll();
+    return all.where((c) => c.enrolledStudentIds.contains(studentId)).toList();
+  }
+
+  // Find class by invite code
+  Future<ClassModel?> findClassByInviteCode(String inviteCode) async {
+    final all = await _loadAll();
+    try {
+      return all.firstWhere((c) => c.inviteCode == inviteCode.toUpperCase());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Enroll student in class
+  Future<bool> enrollStudentInClass(String classId, String studentId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final classes = await _loadAll();
+    final idx = classes.indexWhere((c) => c.id == classId);
+    if (idx >= 0) {
+      final classModel = classes[idx];
+      if (!classModel.enrolledStudentIds.contains(studentId)) {
+        final updatedStudents = [...classModel.enrolledStudentIds, studentId];
+        classes[idx] = classModel.copyWith(enrolledStudentIds: updatedStudents);
+        await _save(prefs, classes);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Remove student from class
+  Future<void> unenrollStudentFromClass(String classId, String studentId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final classes = await _loadAll();
+    final idx = classes.indexWhere((c) => c.id == classId);
+    if (idx >= 0) {
+      final classModel = classes[idx];
+      final updatedStudents = classModel.enrolledStudentIds.where((id) => id != studentId).toList();
+      classes[idx] = classModel.copyWith(enrolledStudentIds: updatedStudents);
+      await _save(prefs, classes);
+    }
   }
 
   Future<void> insertClass(ClassModel model) async {
@@ -37,7 +85,7 @@ class LocalDbService {
   }
 
   Future<void> _save(SharedPreferences prefs, List<ClassModel> classes) async {
-    await prefs.setString(_keyClasses, jsonEncode(classes.map(_toMap).toList()));
+    await prefs.setString(_keyClasses, jsonEncode(classes.map((c) => c.toMap()).toList()));
   }
 
   Future<List<ClassModel>> _loadAll() async {
@@ -45,83 +93,54 @@ class LocalDbService {
     final raw = prefs.getString(_keyClasses);
     if (raw == null) return [];
     final decoded = jsonDecode(raw) as List<dynamic>;
-    return decoded.map((e) => _fromMap(e as Map<String, dynamic>)).toList();
+    return decoded.map((e) => ClassModel.fromMap(e as Map<String, dynamic>)).toList();
   }
 
-  Map<String, dynamic> _toMap(ClassModel c) => {
-        'id': c.id,
-        'userId': c.userId,
-        'name': c.name,
-        'daysOfWeek': c.daysOfWeek,
-        'startHour': c.startTime.hour,
-        'startMinute': c.startTime.minute,
-        'endHour': c.endTime.hour,
-        'endMinute': c.endTime.minute,
-        'instructorOrRoom': c.instructorOrRoom,
-        'location': c.location,
-        'notes': c.notes,
-        'color': c.color.value,
-        'alerts': c.alerts
-            .map((a) => {'timeBefore': a.timeBefore.inMinutes, 'isEnabled': a.isEnabled})
-            .toList(),
-        'googleEventId': c.googleEventId,
-        'lastSyncedAt': c.lastSyncedAt?.toIso8601String(),
-        'syncWithGoogle': c.syncWithGoogle,
-        'isModifiedLocally': c.isModifiedLocally,
-        'createdAt': c.createdAt.toIso8601String(),
-        'updatedAt': c.updatedAt.toIso8601String(),
-      };
-
-  ClassModel _fromMap(Map<String, dynamic> map) {
-    return ClassModel(
-      id: map['id'] as String,
-      userId: map['userId'] as String,
-      name: map['name'] as String,
-      daysOfWeek: List<int>.from(map['daysOfWeek'] as List<dynamic>),
-      startTime: TimeOfDay(hour: map['startHour'] as int, minute: map['startMinute'] as int),
-      endTime: TimeOfDay(hour: map['endHour'] as int, minute: map['endMinute'] as int),
-      instructorOrRoom: map['instructorOrRoom'] as String,
-      location: map['location'] as String,
-      notes: map['notes'] as String,
-      color: Color(map['color'] as int),
-      alerts: (map['alerts'] as List<dynamic>)
-          .map((a) => AlertModel(
-                timeBefore: Duration(minutes: (a as Map<String, dynamic>)['timeBefore'] as int),
-                isEnabled: (a)['isEnabled'] as bool,
-              ))
-          .toList(),
-      googleEventId: map['googleEventId'] as String?,
-      lastSyncedAt: map['lastSyncedAt'] != null
-          ? DateTime.tryParse(map['lastSyncedAt'] as String)
-          : null,
-      syncWithGoogle: (map['syncWithGoogle'] as bool?) ?? false,
-      isModifiedLocally: (map['isModifiedLocally'] as bool?) ?? false,
-      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
-      updatedAt: DateTime.tryParse(map['updatedAt'] as String? ?? '') ?? DateTime.now(),
-    );
-  }
-
+  // No sample classes - users create their own or join via invite code
   List<ClassModel> sampleClasses(String userId, bool isStudent) {
-    return [
-      ClassModel(
-        id: 'cls-1',
-        userId: userId,
-        name: isStudent ? 'CS 101' : 'CS 101 Lecture',
-        daysOfWeek: const [1, 3, 5],
-        startTime: const TimeOfDay(hour: 10, minute: 0),
-        endTime: const TimeOfDay(hour: 11, minute: 30),
-        instructorOrRoom: isStudent ? 'Dr. Smith' : 'Room B201',
-        location: 'Main Building',
-        notes: 'Intro to programming',
-        color: AppColors.classPalette.first,
-        alerts: [
-          AlertModel(timeBefore: const Duration(hours: 24), isEnabled: true),
-          AlertModel(timeBefore: const Duration(minutes: 15), isEnabled: true),
-        ],
-        syncWithGoogle: true,
-        isModifiedLocally: false,
-        lastSyncedAt: DateTime.now().subtract(const Duration(hours: 3)),
-      ),
-    ];
+    return []; // Return empty list - no hardcoded data
   }
+
+  // Schedule methods
+  Future<List<ScheduleModel>> loadSchedules(String userId) async {
+    final all = await _loadAllSchedules();
+    return all.where((s) => s.userId == userId).toList();
+  }
+
+  Future<void> insertSchedule(ScheduleModel model) async {
+    final prefs = await SharedPreferences.getInstance();
+    final all = await _loadAllSchedules();
+    all.add(model);
+    await _saveSchedules(prefs, all);
+  }
+
+  Future<void> updateSchedule(ScheduleModel model) async {
+    final prefs = await SharedPreferences.getInstance();
+    final schedules = await _loadAllSchedules();
+    final idx = schedules.indexWhere((s) => s.id == model.id);
+    if (idx >= 0) {
+      schedules[idx] = model;
+      await _saveSchedules(prefs, schedules);
+    }
+  }
+
+  Future<void> deleteSchedule(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final all = await _loadAllSchedules();
+    all.removeWhere((s) => s.id == id);
+    await _saveSchedules(prefs, all);
+  }
+
+  Future<void> _saveSchedules(SharedPreferences prefs, List<ScheduleModel> schedules) async {
+    await prefs.setString(_keySchedules, jsonEncode(schedules.map((s) => s.toMap()).toList()));
+  }
+
+  Future<List<ScheduleModel>> _loadAllSchedules() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_keySchedules);
+    if (raw == null) return [];
+    final decoded = jsonDecode(raw) as List<dynamic>;
+    return decoded.map((e) => ScheduleModel.fromMap(e as Map<String, dynamic>)).toList();
+  }
+
 }

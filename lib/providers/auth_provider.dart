@@ -29,7 +29,25 @@ class AuthProvider extends ChangeNotifier {
     _user = result;
     _loading = false;
     notifyListeners();
-    return result == null ? 'Invalid credentials' : null;
+    return result == null ? 'Invalid credentials or wrong role selected' : null;
+  }
+
+  Future<String?> signInWithGoogle({required UserType role}) async {
+    _loading = true;
+    notifyListeners();
+    
+    final result = await _authService.signInWithGoogle(role: role);
+    
+    if (result['success'] == true) {
+      _user = result['user'] as UserModel;
+      _loading = false;
+      notifyListeners();
+      return null;
+    } else {
+      _loading = false;
+      notifyListeners();
+      return result['message'] as String;
+    }
   }
 
   Future<String?> signup({
@@ -55,7 +73,7 @@ class AuthProvider extends ChangeNotifier {
     _user = user;
     _loading = false;
     notifyListeners();
-    return null;
+    return user == null ? 'Failed to create account. Email may already be in use.' : null;
   }
 
   Future<void> logout() async {

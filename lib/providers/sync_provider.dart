@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../models/class.dart';
 import '../models/user.dart';
 import '../services/calendar_service.dart';
 

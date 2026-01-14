@@ -6,7 +6,6 @@ import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import 'dashboard_screen.dart';
 import 'signup_screen.dart';
-import 'role_selection_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,6 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscure = true;
   UserType _role = UserType.student;
   bool _init = false;
+  bool _isGoogleLoading = false;
 
   @override
   void didChangeDependencies() {
@@ -32,32 +32,44 @@ class _LoginScreenState extends State<LoginScreen> {
     _init = true;
     final args = ModalRoute.of(context)?.settings.arguments as LoginArgs?;
     _role = args?.role ?? UserType.student;
-    _emailController.text = _role == UserType.student ? 'student@test.com' : 'faculty@test.com';
-    _passwordController.text = 'password123';
+  }
+
+  Future<void> _signInWithGoogle() async {
+    setState(() => _isGoogleLoading = true);
+    
+    final auth = context.read<AuthProvider>();
+    final error = await auth.signInWithGoogle(role: _role);
+    
+    setState(() => _isGoogleLoading = false);
+    
+    if (error != null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+    } else {
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(context, DashboardScreen.routeName, (_) => false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    return Scaffold(
-      backgroundColor: const Color(0xFFE8E8E8), // Light gray background
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () {
-            // Try to pop, if it fails (after logout), go to role selection
-            if (!Navigator.canPop(context)) {
-              Navigator.pushNamedAndRemoveUntil(context, RoleSelectionScreen.routeName, (_) => false);
-            } else {
+    return PopScope(
+      canPop: true, // Allow normal back navigation
+      child: Scaffold(
+        backgroundColor: const Color(0xFFE8E8E8),
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black87),
+            onPressed: () {
               Navigator.pop(context);
-            }
-          },
+            },
+          ),
         ),
-      ),
-      body: SafeArea(
+        body: SafeArea(
         child: Center(
           child: Container(
             margin: const EdgeInsets.all(20),
@@ -67,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
               borderRadius: BorderRadius.circular(15),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
+                  color: Colors.black.withOpacity(0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 5),
                 ),
@@ -83,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       _role == UserType.student ? 'Student Login' : 'Faculty Login',
                       style: GoogleFonts.poppins(
-                        fontSize: 36,
+                        fontSize: 32,
                         fontWeight: FontWeight.w800,
                         color: const Color(0xFF257FCE),
                       ),
@@ -91,17 +103,70 @@ class _LoginScreenState extends State<LoginScreen> {
                     
                     const SizedBox(height: 8),
                     
-                    // Subtitle
                     Text(
                       'Sign in to your account',
                       style: GoogleFonts.albertSans(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.w600,
                         color: Colors.black87,
                       ),
                     ),
                     
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 30),
+                    
+                    // Google Sign-In Button
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: OutlinedButton.icon(
+                        onPressed: _isGoogleLoading ? null : _signInWithGoogle,
+                        icon: _isGoogleLoading 
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Image.network(
+                                'https://www.google.com/favicon.ico',
+                                width: 20,
+                                height: 20,
+                                errorBuilder: (_, __, ___) => const Icon(Icons.g_mobiledata, size: 24),
+                              ),
+                        label: Text(
+                          _isGoogleLoading ? 'Signing in...' : 'Continue with Google',
+                          style: GoogleFonts.albertSans(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.grey),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Divider
+                    Row(
+                      children: [
+                        const Expanded(child: Divider()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'or',
+                            style: GoogleFonts.albertSans(color: Colors.grey),
+                          ),
+                        ),
+                        const Expanded(child: Divider()),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 20),
                     
                     // Email Field
                     Column(
@@ -110,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Text(
                           'Email',
                           style: GoogleFonts.albertSans(
-                            fontSize: 20,
+                            fontSize: 16,
                             fontWeight: FontWeight.w500,
                             color: Colors.black87,
                           ),
@@ -121,6 +186,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.next,
                           decoration: InputDecoration(
+                            hintText: 'Enter your email',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(5),
                               borderSide: const BorderSide(color: Colors.grey),
@@ -143,7 +209,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
                     
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     
                     // Password Field
                     Column(
@@ -152,7 +218,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Text(
                           'Password',
                           style: GoogleFonts.albertSans(
-                            fontSize: 20,
+                            fontSize: 16,
                             fontWeight: FontWeight.w500,
                             color: Colors.black87,
                           ),
@@ -163,6 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           obscureText: _obscure,
                           textInputAction: TextInputAction.done,
                           decoration: InputDecoration(
+                            hintText: 'Enter your password',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(5),
                               borderSide: const BorderSide(color: Colors.grey),
@@ -184,12 +251,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               vertical: 12,
                             ),
                           ),
-                          validator: (value) => (value ?? '').length >= 6 ? null : 'Password too short',
+                          validator: (value) => (value ?? '').length >= 6 ? null : 'Password must be at least 6 characters',
                         ),
                       ],
                     ),
                     
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 24),
                     
                     // Login Button
                     SizedBox(
@@ -211,7 +278,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
                                 } else {
                                   if (!mounted) return;
-                                  Navigator.pushReplacementNamed(context, DashboardScreen.routeName);
+                                  Navigator.pushNamedAndRemoveUntil(context, DashboardScreen.routeName, (_) => false);
                                 }
                               },
                         style: ElevatedButton.styleFrom(
@@ -234,18 +301,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     
                     // Sign Up Link
                     TextButton(
-                      onPressed: () => Navigator.pushNamed(
-                        context,
-                        SignupScreen.routeName,
-                      ),
+                      onPressed: () => Navigator.pushNamed(context, SignupScreen.routeName),
                       child: Text(
                         "Don't have an account? Sign Up",
                         style: GoogleFonts.albertSans(
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.w500,
                           color: Colors.black87,
                         ),
@@ -256,6 +320,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
+        ),
         ),
       ),
     );
