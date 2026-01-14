@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/attendance.dart';
@@ -8,6 +9,7 @@ class AttendanceProvider extends ChangeNotifier {
   final Map<String, List<AttendanceRecord>> _attendanceByClass = {};
   final Map<String, List<EnrolledStudent>> _studentsByClass = {};
   final Map<String, String> _activeQrCodes = {}; // classId -> qrCode
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   
   List<AttendanceRecord> getAttendanceForClass(String classId) {
     return _attendanceByClass[classId] ?? [];
@@ -122,39 +124,70 @@ class AttendanceProvider extends ChangeNotifier {
     }
   }
 
-  /// Load students for a class (simulated - in real app would come from backend)
+  /// Load students for a class from Firestore
   Future<void> loadStudentsForClass(String classId, List<String> studentIds) async {
     await _loadAttendance();
     
-    // Create enrolled student entries
-    final students = studentIds.asMap().entries.map((entry) {
-      final index = entry.key;
-      final id = entry.value;
-      
-      // Check if checked in today
-      final today = DateTime.now();
-      final isCheckedIn = _attendanceByClass[classId]?.any((r) =>
-        r.studentId == id &&
-        r.date.year == today.year &&
-        r.date.month == today.month &&
-        r.date.day == today.day
-      ) ?? false;
+    if (studentIds.isEmpty) {
+      _studentsByClass[classId] = [];
+      notifyListeners();
+      return;
+    }
+    
+    final students = <EnrolledStudent>[];
+    
+    // Fetch student data from Firestore
+    for (final studentId in studentIds) {
+      try {
+        final userDoc = await _firestore.collection('users').doc(studentId).get();
+        
+        String name = 'Unknown Student';
+        String email = 'unknown@school.edu';
+        String? studentIdNum;
+        
+        if (userDoc.exists) {
+          final data = userDoc.data()!;
+          name = data['fullName'] as String? ?? 'Unknown Student';
+          email = data['email'] as String? ?? 'unknown@school.edu';
+          studentIdNum = data['studentId'] as String?;
+        }
+        
+        // Check if checked in today
+        final today = DateTime.now();
+        final isCheckedIn = _attendanceByClass[classId]?.any((r) =>
+          r.studentId == studentId &&
+          r.date.year == today.year &&
+          r.date.month == today.month &&
+          r.date.day == today.day
+        ) ?? false;
 
-      // Count total attendance
-      final attendedCount = _attendanceByClass[classId]
-          ?.where((r) => r.studentId == id)
-          .length ?? 0;
+        // Count total attendance
+        final attendedCount = _attendanceByClass[classId]
+            ?.where((r) => r.studentId == studentId)
+            .length ?? 0;
 
-      return EnrolledStudent(
-        id: id,
-        name: 'Student ${index + 1}',
-        email: 'student${index + 1}@school.edu',
-        studentId: 'S${(10000 + index).toString()}',
-        totalClasses: 10, // Simulated
-        attendedClasses: attendedCount,
-        isCheckedInToday: isCheckedIn,
-      );
-    }).toList();
+        students.add(EnrolledStudent(
+          id: studentId,
+          name: name,
+          email: email,
+          studentId: studentIdNum,
+          totalClasses: 10, // This should be calculated based on class schedule
+          attendedClasses: attendedCount,
+          isCheckedInToday: isCheckedIn,
+        ));
+      } catch (e) {
+        debugPrint('Error fetching student $studentId: $e');
+        // Add placeholder if fetch fails
+        students.add(EnrolledStudent(
+          id: studentId,
+          name: 'Student',
+          email: 'student@school.edu',
+          totalClasses: 10,
+          attendedClasses: 0,
+          isCheckedInToday: false,
+        ));
+      }
+    }
 
     _studentsByClass[classId] = students;
     notifyListeners();

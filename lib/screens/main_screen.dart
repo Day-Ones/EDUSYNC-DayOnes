@@ -8,6 +8,7 @@ import '../providers/auth_provider.dart';
 import '../providers/class_provider.dart';
 import '../providers/schedule_provider.dart';
 import '../providers/location_provider.dart';
+import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import 'add_edit_class_screen.dart';
 import 'join_class_screen.dart';
@@ -25,6 +26,7 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   late PageController _pageController;
   int _currentIndex = 0;
+  bool _notificationsInitialized = false;
 
   @override
   void initState() {
@@ -53,12 +55,45 @@ class _MainScreenState extends State<MainScreen> {
           email: user.email,
         );
       }
+      
+      // Initialize notifications for class reminders
+      if (!_notificationsInitialized) {
+        _notificationsInitialized = true;
+        _initializeNotifications();
+      }
     }
+  }
+
+  void _initializeNotifications() {
+    final classProvider = context.read<ClassProvider>();
+    final notificationService = context.read<NotificationService>();
+    
+    // Start monitoring classes for notifications
+    final allClasses = [...classProvider.classes, ...classProvider.enrolledClasses];
+    notificationService.startClassMonitoring(allClasses);
+    
+    // Schedule alerts for each class
+    for (final classModel in allClasses) {
+      if (classModel.alerts.isNotEmpty) {
+        notificationService.scheduleAlerts(classModel);
+      }
+    }
+    
+    // Listen for class changes to update notifications
+    classProvider.addListener(() {
+      final updatedClasses = [...classProvider.classes, ...classProvider.enrolledClasses];
+      notificationService.updateScheduledClasses(updatedClasses);
+    });
   }
 
   @override
   void dispose() {
     _pageController.dispose();
+    // Stop notification monitoring
+    try {
+      final notificationService = context.read<NotificationService>();
+      notificationService.stopClassMonitoring();
+    } catch (_) {}
     super.dispose();
   }
 
@@ -252,7 +287,7 @@ class _HomePanel extends StatelessWidget {
         trailing: isEnrolled
             ? Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
                 child: Text('Enrolled', style: GoogleFonts.albertSans(fontSize: 10, color: Colors.green, fontWeight: FontWeight.w600)),
               )
             : classItem.campusLocation != null
@@ -268,13 +303,13 @@ class _HomePanel extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))],
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: iconColor.withOpacity(0.2), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: iconColor.withValues(alpha: 0.2), shape: BoxShape.circle),
             child: Icon(icon, color: iconColor, size: 24),
           ),
           const SizedBox(height: 8),
@@ -415,7 +450,7 @@ class _ClassesPanel extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: classItem.color.withOpacity(0.2),
+                backgroundColor: classItem.color.withValues(alpha: 0.2),
                 child: Icon(Icons.class_, color: classItem.color),
               ),
               const SizedBox(width: 16),
@@ -435,7 +470,7 @@ class _ClassesPanel extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
+                              color: Colors.green.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
@@ -589,7 +624,7 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                     children: [
                       CircleAvatar(
                         radius: 32,
-                        backgroundColor: const Color(0xFF257FCE).withOpacity(0.2),
+                        backgroundColor: const Color(0xFF257FCE).withValues(alpha: 0.2),
                         child: Text(
                           user.fullName.isNotEmpty ? user.fullName.characters.first.toUpperCase() : '?',
                           style: const TextStyle(color: Color(0xFF257FCE), fontWeight: FontWeight.w800, fontSize: 24),
@@ -641,7 +676,7 @@ class _ProfilePanelState extends State<_ProfilePanel> {
               const SizedBox(height: 8),
               Card(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                color: user.isGoogleCalendarConnected ? const Color(0xFF4CAF50).withOpacity(0.08) : Colors.grey.withOpacity(0.05),
+                color: user.isGoogleCalendarConnected ? const Color(0xFF4CAF50).withValues(alpha: 0.08) : Colors.grey.withValues(alpha: 0.05),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
@@ -652,7 +687,7 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: user.isGoogleCalendarConnected ? const Color(0xFF4CAF50).withOpacity(0.2) : Colors.grey.withOpacity(0.2),
+                              color: user.isGoogleCalendarConnected ? const Color(0xFF4CAF50).withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
@@ -691,6 +726,83 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                 subtitle: Text(user.googleAccountEmail ?? 'Not connected', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
               ),
               const Divider(height: 24),
+              
+              // Location Sharing (Faculty only)
+              if (user.userType == UserType.faculty) ...[
+                Text('Location Sharing', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                Consumer<LocationProvider>(
+                  builder: (context, locationProvider, _) {
+                    return Card(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      color: locationProvider.isSharing ? const Color(0xFF4CAF50).withValues(alpha: 0.08) : Colors.grey.withValues(alpha: 0.05),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: locationProvider.isSharing ? const Color(0xFF4CAF50).withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    locationProvider.isSharing ? Icons.location_on : Icons.location_off,
+                                    color: locationProvider.isSharing ? const Color(0xFF4CAF50) : Colors.grey,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('Share Location with Students', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+                                      Text(
+                                        locationProvider.isSharing ? 'Students can see your ETA' : 'Location sharing is off',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: locationProvider.isSharing ? const Color(0xFF4CAF50) : Colors.grey,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Switch(
+                                  value: locationProvider.isSharing,
+                                  onChanged: locationProvider.isLoading ? null : (value) async {
+                                    await locationProvider.toggleSharing();
+                                    if (locationProvider.error != null && context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text(locationProvider.error!)),
+                                      );
+                                      locationProvider.clearError();
+                                    }
+                                  },
+                                  activeTrackColor: const Color(0xFF4CAF50).withValues(alpha: 0.5),
+                                  activeThumbColor: const Color(0xFF4CAF50),
+                                ),
+                              ],
+                            ),
+                            if (locationProvider.isSharing && locationProvider.currentPosition != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                'Your location is being shared in real-time',
+                                style: GoogleFonts.albertSans(fontSize: 11, color: Colors.grey[600]),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(height: 24),
+              ],
               
               // App Information
               Text('App Information', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textSecondary)),

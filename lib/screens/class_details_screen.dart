@@ -6,8 +6,6 @@ import '../models/class.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../providers/class_provider.dart';
-import '../providers/location_provider.dart';
-import '../models/location.dart';
 import '../services/faculty_tracking_service.dart';
 import 'add_edit_class_screen.dart';
 import 'student_list_screen.dart';
@@ -19,8 +17,8 @@ class ClassDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final classModel = ModalRoute.of(context)?.settings.arguments as ClassModel?;
-    if (classModel == null) {
+    final argClassModel = ModalRoute.of(context)?.settings.arguments as ClassModel?;
+    if (argClassModel == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Class Details')),
         body: const Center(child: Text('Class not found')),
@@ -29,45 +27,53 @@ class ClassDetailsScreen extends StatelessWidget {
 
     final auth = context.watch<AuthProvider>();
     final classProvider = context.watch<ClassProvider>();
-    final locationProvider = context.watch<LocationProvider>();
+    
+    // Get the latest class data from provider (for real-time updates after editing)
+    final classModel = classProvider.classes.firstWhere(
+      (c) => c.id == argClassModel.id,
+      orElse: () => argClassModel,
+    );
+    
     final user = auth.user;
     final isFaculty = user?.userType == UserType.faculty;
     final isOwner = classModel.userId == user?.id;
 
-    // Get faculty location status if student
-    FacultyLocationModel? facultyLocation;
-    if (!isFaculty && classModel.facultyId != null) {
-      try {
-        facultyLocation = locationProvider.facultyLocations
-            .firstWhere((f) => f.facultyId == classModel.facultyId);
-      } catch (_) {}
-    }
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          classModel.name,
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
         backgroundColor: classModel.color,
-        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white24,
+              ),
+              child: const Icon(
+                Icons.chevron_left,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+          ),
+        ),
         actions: [
           if (isOwner)
             IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => Navigator.pushNamed(
-                context,
-                AddEditClassScreen.routeName,
-                arguments: classModel,
-              ),
-            ),
-          if (isOwner && classModel.inviteCode != null)
-            IconButton(
-              icon: const Icon(Icons.share),
-              onPressed: () => _showInviteCodeDialog(context, classModel.inviteCode!),
+              icon: const Icon(Icons.edit, color: Colors.white),
+              onPressed: () async {
+                await Navigator.pushNamed(
+                  context,
+                  AddEditClassScreen.routeName,
+                  arguments: classModel,
+                );
+              },
             ),
           if (isOwner)
             PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (value) async {
                 if (value == 'delete') {
                   final confirm = await showDialog<bool>(
@@ -125,7 +131,7 @@ class ClassDetailsScreen extends StatelessWidget {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
-              color: classModel.color.withOpacity(0.1),
+              color: classModel.color.withValues(alpha: 0.1),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -199,7 +205,7 @@ class ClassDetailsScreen extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.1),
+                                color: Colors.green.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Icon(Icons.location_on, color: Colors.green),
@@ -304,7 +310,7 @@ class ClassDetailsScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Card(
                   elevation: 2,
-                  color: Colors.green.withOpacity(0.05),
+                  color: Colors.green.withValues(alpha: 0.05),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: InkWell(
                     onTap: () => Navigator.pushNamed(
@@ -320,7 +326,7 @@ class ClassDetailsScreen extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
+                              color: Colors.green.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Icon(Icons.qr_code, color: Colors.green, size: 28),
@@ -363,7 +369,7 @@ class ClassDetailsScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Card(
                   elevation: 2,
-                  color: const Color(0xFF2196F3).withOpacity(0.05),
+                  color: const Color(0xFF2196F3).withValues(alpha: 0.05),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: InkWell(
                     onTap: () => Navigator.pushNamed(context, AttendanceScannerScreen.routeName),
@@ -375,7 +381,7 @@ class ClassDetailsScreen extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF2196F3).withOpacity(0.1),
+                              color: const Color(0xFF2196F3).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: const Icon(Icons.qr_code_scanner, color: Color(0xFF2196F3), size: 28),
@@ -418,7 +424,7 @@ class ClassDetailsScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Card(
                   elevation: 2,
-                  color: const Color(0xFF2196F3).withOpacity(0.05),
+                  color: const Color(0xFF2196F3).withValues(alpha: 0.05),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
@@ -584,7 +590,7 @@ class ClassDetailsScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFF2196F3).withOpacity(0.1),
+                color: const Color(0xFF2196F3).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFF2196F3)),
               ),
@@ -664,7 +670,7 @@ class _FacultyETAWidget extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: Colors.blue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Icon(Icons.person, color: Colors.blue),
@@ -727,7 +733,7 @@ class _FacultyETAWidget extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
+                          color: Colors.blue.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(Icons.person, color: Colors.blue),
@@ -759,8 +765,8 @@ class _FacultyETAWidget extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: etaInfo.etaMinutes <= 5 
-                                ? Colors.green.withOpacity(0.1)
-                                : Colors.orange.withOpacity(0.1),
+                                ? Colors.green.withValues(alpha: 0.1)
+                                : Colors.orange.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Row(
@@ -793,7 +799,7 @@ class _FacultyETAWidget extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: Colors.grey.withOpacity(0.1),
+                            color: Colors.grey.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(

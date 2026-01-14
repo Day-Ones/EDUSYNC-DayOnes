@@ -117,9 +117,25 @@ class _AttendanceScannerScreenState extends State<AttendanceScannerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Check-in Attendance', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
         backgroundColor: const Color(0xFF2196F3),
-        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white24,
+              ),
+              child: const Icon(
+                Icons.chevron_left,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+          ),
+        ),
       ),
       body: Stack(
         children: [
