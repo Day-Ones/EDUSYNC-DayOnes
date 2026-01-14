@@ -1,37 +1,62 @@
-import 'dart:convert';
-import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:collection/collection.dart';
 import '../models/user.dart';
 
 class AuthService {
   AuthService(this._storage);
   final FlutterSecureStorage _storage;
+  
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
-  static const _keyUsers = 'auth_users';
   static const _keySession = 'auth_session';
+  static const _keyUserType = 'auth_user_type';
 
+  /// Login with email and password
   Future<UserModel?> login(String email, String password, {required UserType role, bool remember = false}) async {
-    final prefs = await SharedPreferences.getInstance();
-    final users = await _loadUsers();
-    UserModel? user;
-    for (final u in users) {
-      final storedHash = await _getStoredHash(u.id);
-      if (u.userType == role && u.email.toLowerCase() == email.toLowerCase() && _hash(password) == storedHash) {
-        user = u;
-        break;
+    try {
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (credential.user == null) return null;
+
+      // Get user data from Firestore
+      final userDoc = await _firestore.collection('users').doc(credential.user!.uid).get();
+      
+      if (!userDoc.exists) {
+        // User exists in Auth but not in Firestore - sign out
+        await _auth.signOut();
+        return null;
       }
-    }
-    if (user != null) {
-      await _storage.write(key: _keySession, value: user.id);
-      if (remember) {
-        await prefs.setString('remember_email', email);
+
+      final userData = userDoc.data()!;
+      final userType = userData['userType'] == 'faculty' ? UserType.faculty : UserType.student;
+
+      // Check if role matches
+      if (userType != role) {
+        await _auth.signOut();
+        return null;
       }
+
+      final user = _userFromFirestore(credential.user!.uid, userData);
+      
+      // Save session locally
+      await _storage.write(key: _keySession, value: credential.user!.uid);
+      await _storage.write(key: _keyUserType, value: role.name);
+
+      return user;
+    } on FirebaseAuthException catch (e) {
+      print('Login error: ${e.message}');
+      return null;
     }
-    return user;
   }
 
+  /// Sign up with email and password
   Future<UserModel?> signUp({
     required String email,
     required String password,
@@ -41,108 +66,182 @@ class AuthService {
     String? facultyId,
     String? department,
   }) async {
-    final users = await _loadUsers();
-    final newUser = UserModel(
-      id: UniqueKey().toString(),
-      email: email,
-      fullName: fullName,
-      userType: userType,
-      studentId: studentId,
-      facultyId: facultyId,
-      department: department,
-      isGoogleCalendarConnected: false,
-    );
-    users.add(newUser);
-    await _saveUsers(users);
-    await _storeHash(newUser.id, _hash(password));
-    await _storage.write(key: _keySession, value: newUser.id);
-    return newUser;
-  }
+    try {
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-  Future<UserModel?> restoreSession() async {
-    final sessionId = await _storage.read(key: _keySession);
-    if (sessionId == null) return null;
-    final users = await _loadUsers();
-    return users.firstWhereOrNull((u) => u.id == sessionId);
-  }
+      if (credential.user == null) return null;
 
-  Future<void> logout() async {
-    await _storage.delete(key: _keySession);
-  }
-
-  Future<List<UserModel>> _loadUsers() async {
-    final raw = await _storage.read(key: _keyUsers);
-    if (raw == null) {
-      final seed = await _seedUsers();
-      await _saveUsers(seed);
-      return seed;
-    }
-    final decoded = jsonDecode(raw) as List<dynamic>;
-    return decoded.map((e) => _fromMap(e as Map<String, dynamic>)).toList();
-  }
-
-  Future<void> _saveUsers(List<UserModel> users) async {
-    final encoded = jsonEncode(users.map(_toMap).toList());
-    await _storage.write(key: _keyUsers, value: encoded);
-  }
-
-  String _hash(String input) => base64Encode(utf8.encode(input));
-
-  Future<void> _storeHash(String userId, String hash) async {
-    await _storage.write(key: 'hash_$userId', value: hash);
-  }
-
-  Future<String?> _getStoredHash(String userId) => _storage.read(key: 'hash_$userId');
-
-  Future<List<UserModel>> _seedUsers() async {
-    final student = UserModel(
-      id: 'seed-student',
-      email: 'student@test.com',
-      fullName: 'Test Student',
-      userType: UserType.student,
-      studentId: 'S12345',
-      department: 'Computer Science',
-      isGoogleCalendarConnected: false,
-    );
-    final faculty = UserModel(
-      id: 'seed-faculty',
-      email: 'faculty@test.com',
-      fullName: 'Prof. Ada Lovelace',
-      userType: UserType.faculty,
-      facultyId: 'F6789',
-      department: 'Mathematics',
-      isGoogleCalendarConnected: false,
-    );
-    await _storeHash(student.id, _hash('password123'));
-    await _storeHash(faculty.id, _hash('password123'));
-    return [student, faculty];
-  }
-
-  Map<String, dynamic> _toMap(UserModel u) => {
-        'id': u.id,
-        'email': u.email,
-        'fullName': u.fullName,
-        'userType': u.userType.name,
-        'studentId': u.studentId,
-        'facultyId': u.facultyId,
-        'department': u.department,
-        'googleAccountEmail': u.googleAccountEmail,
-        'isGoogleCalendarConnected': u.isGoogleCalendarConnected,
-        'createdAt': u.createdAt.toIso8601String(),
+      // Create user document in Firestore
+      final userData = {
+        'id': credential.user!.uid,
+        'email': email,
+        'fullName': fullName,
+        'userType': userType.name,
+        'studentId': studentId,
+        'facultyId': facultyId,
+        'department': department,
+        'isGoogleCalendarConnected': false,
+        'createdAt': FieldValue.serverTimestamp(),
       };
 
-  UserModel _fromMap(Map<String, dynamic> map) {
+      await _firestore.collection('users').doc(credential.user!.uid).set(userData);
+
+      final user = UserModel(
+        id: credential.user!.uid,
+        email: email,
+        fullName: fullName,
+        userType: userType,
+        studentId: studentId,
+        facultyId: facultyId,
+        department: department,
+        isGoogleCalendarConnected: false,
+      );
+
+      // Save session locally
+      await _storage.write(key: _keySession, value: credential.user!.uid);
+      await _storage.write(key: _keyUserType, value: userType.name);
+
+      return user;
+    } on FirebaseAuthException catch (e) {
+      print('Signup error: ${e.message}');
+      return null;
+    }
+  }
+
+  /// Sign in with Google
+  Future<Map<String, dynamic>> signInWithGoogle({required UserType role}) async {
+    try {
+      // Trigger Google Sign-In flow
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      
+      if (googleUser == null) {
+        return {'success': false, 'message': 'Google sign-in cancelled'};
+      }
+
+      // Get auth details
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+
+      // Create Firebase credential
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in to Firebase
+      final userCredential = await _auth.signInWithCredential(credential);
+      
+      if (userCredential.user == null) {
+        return {'success': false, 'message': 'Failed to sign in with Google'};
+      }
+
+      // Check if user exists in Firestore
+      final userDoc = await _firestore.collection('users').doc(userCredential.user!.uid).get();
+
+      if (userDoc.exists) {
+        // Existing user - check role
+        final userData = userDoc.data()!;
+        final existingRole = userData['userType'] == 'faculty' ? UserType.faculty : UserType.student;
+        
+        if (existingRole != role) {
+          await _auth.signOut();
+          await _googleSignIn.signOut();
+          return {
+            'success': false,
+            'message': 'This Google account is registered as ${existingRole.name}. Please select the correct role.',
+          };
+        }
+
+        final user = _userFromFirestore(userCredential.user!.uid, userData);
+        
+        await _storage.write(key: _keySession, value: userCredential.user!.uid);
+        await _storage.write(key: _keyUserType, value: role.name);
+
+        return {'success': true, 'user': user, 'isNewUser': false};
+      } else {
+        // New user - create profile
+        final userData = {
+          'id': userCredential.user!.uid,
+          'email': userCredential.user!.email,
+          'fullName': userCredential.user!.displayName ?? 'User',
+          'userType': role.name,
+          'googleAccountEmail': userCredential.user!.email,
+          'isGoogleCalendarConnected': true,
+          'createdAt': FieldValue.serverTimestamp(),
+        };
+
+        await _firestore.collection('users').doc(userCredential.user!.uid).set(userData);
+
+        final user = UserModel(
+          id: userCredential.user!.uid,
+          email: userCredential.user!.email ?? '',
+          fullName: userCredential.user!.displayName ?? 'User',
+          userType: role,
+          googleAccountEmail: userCredential.user!.email,
+          isGoogleCalendarConnected: true,
+        );
+
+        await _storage.write(key: _keySession, value: userCredential.user!.uid);
+        await _storage.write(key: _keyUserType, value: role.name);
+
+        return {'success': true, 'user': user, 'isNewUser': true};
+      }
+    } catch (e) {
+      print('Google sign-in error: $e');
+      return {'success': false, 'message': 'Google sign-in failed: $e'};
+    }
+  }
+
+  /// Restore session from local storage
+  Future<UserModel?> restoreSession() async {
+    try {
+      // Check Firebase Auth state first
+      final firebaseUser = _auth.currentUser;
+      
+      if (firebaseUser != null) {
+        final userDoc = await _firestore.collection('users').doc(firebaseUser.uid).get();
+        if (userDoc.exists) {
+          return _userFromFirestore(firebaseUser.uid, userDoc.data()!);
+        }
+      }
+
+      // Fallback to local session
+      final sessionId = await _storage.read(key: _keySession);
+      if (sessionId == null) return null;
+
+      final userDoc = await _firestore.collection('users').doc(sessionId).get();
+      if (!userDoc.exists) return null;
+
+      return _userFromFirestore(sessionId, userDoc.data()!);
+    } catch (e) {
+      print('Restore session error: $e');
+      return null;
+    }
+  }
+
+  /// Logout
+  Future<void> logout() async {
+    await _auth.signOut();
+    await _googleSignIn.signOut();
+    await _storage.delete(key: _keySession);
+    await _storage.delete(key: _keyUserType);
+  }
+
+  /// Convert Firestore data to UserModel
+  UserModel _userFromFirestore(String id, Map<String, dynamic> data) {
     return UserModel(
-      id: map['id'] as String,
-      email: map['email'] as String,
-      fullName: map['fullName'] as String,
-      userType: map['userType'] == 'faculty' ? UserType.faculty : UserType.student,
-      studentId: map['studentId'] as String?,
-      facultyId: map['facultyId'] as String?,
-      department: map['department'] as String?,
-      googleAccountEmail: map['googleAccountEmail'] as String?,
-      isGoogleCalendarConnected: (map['isGoogleCalendarConnected'] as bool?) ?? false,
-      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
+      id: id,
+      email: data['email'] ?? '',
+      fullName: data['fullName'] ?? '',
+      userType: data['userType'] == 'faculty' ? UserType.faculty : UserType.student,
+      studentId: data['studentId'],
+      facultyId: data['facultyId'],
+      department: data['department'],
+      googleAccountEmail: data['googleAccountEmail'],
+      isGoogleCalendarConnected: data['isGoogleCalendarConnected'] ?? false,
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 }

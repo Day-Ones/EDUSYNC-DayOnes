@@ -30,13 +30,7 @@ class ClassProvider extends ChangeNotifier {
       _enrolledClasses = [];
     }
     
-    if (_classes.isEmpty && !isStudent) {
-      // Only create sample classes for faculty
-      _classes = _dbService.sampleClasses(userId, isStudent);
-      for (final c in _classes) {
-        await _dbService.insertClass(c);
-      }
-    }
+    // No sample classes - users create their own
     _loading = false;
     notifyListeners();
   }

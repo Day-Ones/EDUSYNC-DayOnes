@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import 'dashboard_screen.dart';
-import 'role_selection_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -91,7 +90,7 @@ class _SignupScreenState extends State<SignupScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Account created successfully!')),
       );
-      Navigator.pushReplacementNamed(context, DashboardScreen.routeName);
+      Navigator.pushNamedAndRemoveUntil(context, DashboardScreen.routeName, (_) => false);
     }
   }
 
@@ -105,14 +104,7 @@ class _SignupScreenState extends State<SignupScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () {
-            // Try to pop, if it fails (after logout), go to role selection
-            if (!Navigator.canPop(context)) {
-              Navigator.pushNamedAndRemoveUntil(context, RoleSelectionScreen.routeName, (_) => false);
-            } else {
-              Navigator.pop(context);
-            }
-          },
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: SafeArea(

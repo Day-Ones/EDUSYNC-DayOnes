@@ -1,4 +1,4 @@
-package com.example.smart_scheduler
+package com.dayones.edusync
 
 import io.flutter.embedding.android.FlutterActivity
 

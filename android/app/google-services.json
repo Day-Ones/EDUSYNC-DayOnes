@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "293968934774",
+    "project_id": "edusync-d33c8",
+    "storage_bucket": "edusync-d33c8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:293968934774:android:7675ac45938ab686a66c57",
+        "android_client_info": {
+          "package_name": "com.dayones.edusync"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "293968934774-dfivklq8uumm8seff2gehqvlf9bm1j64.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.dayones.edusync",
+            "certificate_hash": "f2306a7b7da40e0dd2971b4a26fc517556a19796"
+          }
+        },
+        {
+          "client_id": "293968934774-gj2mht7ijc31b9qafje0n6d7a3nfutmv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfLqXZ5Dl5PHBv49AIX6S_oPkEY_8N3S8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "293968934774-gj2mht7ijc31b9qafje0n6d7a3nfutmv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

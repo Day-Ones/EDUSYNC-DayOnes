@@ -53,6 +53,18 @@ class CampusLocationModel {
   final String? building;
   final String? room;
 
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is CampusLocationModel &&
+        other.name == name &&
+        other.latitude == latitude &&
+        other.longitude == longitude;
+  }
+
+  @override
+  int get hashCode => name.hashCode ^ latitude.hashCode ^ longitude.hashCode;
+
   CampusLocationModel copyWith({
     String? name,
     double? latitude,
@@ -279,34 +291,10 @@ class ClassModel {
 class PredefinedCampuses {
   static final List<CampusLocationModel> campuses = [
     CampusLocationModel(
-      name: 'Main Campus',
-      latitude: 37.7749,
-      longitude: -122.4194,
+      name: 'PUP Taguig Campus',
+      latitude: 14.5176,
+      longitude: 121.0509,
       building: 'Main Building',
-    ),
-    CampusLocationModel(
-      name: 'North Campus',
-      latitude: 37.7849,
-      longitude: -122.4094,
-      building: 'North Hall',
-    ),
-    CampusLocationModel(
-      name: 'South Campus',
-      latitude: 37.7649,
-      longitude: -122.4294,
-      building: 'South Building',
-    ),
-    CampusLocationModel(
-      name: 'East Campus',
-      latitude: 37.7749,
-      longitude: -122.4094,
-      building: 'East Center',
-    ),
-    CampusLocationModel(
-      name: 'West Campus',
-      latitude: 37.7749,
-      longitude: -122.4294,
-      building: 'West Tower',
     ),
   ];
 }

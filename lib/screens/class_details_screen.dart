@@ -8,7 +8,10 @@ import '../providers/auth_provider.dart';
 import '../providers/class_provider.dart';
 import '../providers/location_provider.dart';
 import '../models/location.dart';
+import '../services/faculty_tracking_service.dart';
 import 'add_edit_class_screen.dart';
+import 'student_list_screen.dart';
+import 'attendance_scanner_screen.dart';
 
 class ClassDetailsScreen extends StatelessWidget {
   const ClassDetailsScreen({super.key});
@@ -165,108 +168,9 @@ class ClassDetailsScreen extends StatelessWidget {
               ),
             ),
 
-            // Faculty Status (for students)
-            if (!isFaculty && classModel.facultyName != null) ...[
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Card(
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Instructor',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 24,
-                              backgroundColor: const Color(0xFF2196F3).withOpacity(0.1),
-                              child: Text(
-                                classModel.facultyName!.split(' ').map((n) => n[0]).take(2).join(),
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF2196F3),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    classModel.facultyName!,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  if (facultyLocation != null)
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          facultyLocation.statusIcon,
-                                          size: 14,
-                                          color: facultyLocation.statusColor,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          facultyLocation.statusText,
-                                          style: GoogleFonts.albertSans(
-                                            fontSize: 13,
-                                            color: facultyLocation.statusColor,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                ],
-                              ),
-                            ),
-                            if (facultyLocation?.estimatedMinutes != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      '~${facultyLocation!.estimatedMinutes}',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.orange[700],
-                                      ),
-                                    ),
-                                    Text(
-                                      'min',
-                                      style: GoogleFonts.albertSans(
-                                        fontSize: 10,
-                                        color: Colors.orange[700],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+            // Faculty Status (for students) with ETA
+            if (!isFaculty && classModel.facultyName != null && classModel.facultyId != null) ...[
+              _FacultyETAWidget(classModel: classModel),
             ],
 
             // Campus Location
@@ -365,38 +269,147 @@ class ClassDetailsScreen extends StatelessWidget {
               ),
             ),
 
-            // Enrolled Students (Faculty only)
-            if (isOwner && classModel.enrolledStudentIds.isNotEmpty) ...[
+            // Attendance Section (Faculty only - always show)
+            if (isOwner) ...[
+              // Show enrolled students count if any
+              if (classModel.enrolledStudentIds.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Enrolled Students (${classModel.enrolledStudentIds.length})',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => Navigator.pushNamed(
+                          context,
+                          StudentListScreen.routeName,
+                          arguments: classModel,
+                        ),
+                        icon: const Icon(Icons.people, size: 18),
+                        label: const Text('View All'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+              // Attendance Action Card - always show for faculty
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'Enrolled Students (${classModel.enrolledStudentIds.length})',
-                  style: GoogleFonts.poppins(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                child: Card(
+                  elevation: 2,
+                  color: Colors.green.withOpacity(0.05),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: InkWell(
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      StudentListScreen.routeName,
+                      arguments: classModel,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.qr_code, color: Colors.green, size: 28),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Check Attendance',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  'Generate QR code for students to scan',
+                                  style: GoogleFonts.albertSans(
+                                    fontSize: 13,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
+              const SizedBox(height: 16),
+            ],
+
+            // Student Attendance Check-in (for enrolled students)
+            if (!isFaculty && classModel.enrolledStudentIds.contains(user?.id)) ...[
+              Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: classModel.enrolledStudentIds.length,
-                itemBuilder: (context, index) {
-                  final studentId = classModel.enrolledStudentIds[index];
-                  return Card(
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: Colors.grey[200],
-                        child: Text('${index + 1}'),
+                child: Card(
+                  elevation: 2,
+                  color: const Color(0xFF2196F3).withOpacity(0.05),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  child: InkWell(
+                    onTap: () => Navigator.pushNamed(context, AttendanceScannerScreen.routeName),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2196F3).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.qr_code_scanner, color: Color(0xFF2196F3), size: 28),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Check-in Attendance',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Text(
+                                  'Scan QR code to mark your attendance',
+                                  style: GoogleFonts.albertSans(
+                                    fontSize: 13,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                        ],
                       ),
-                      title: Text('Student ${index + 1}'),
-                      subtitle: Text('ID: ${studentId.substring(0, 8)}...'),
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
+              const SizedBox(height: 16),
             ],
 
             // Invite Code Section (Faculty only)
@@ -616,5 +629,222 @@ class ClassDetailsScreen extends StatelessWidget {
   String _formatDays(List<int> days) {
     const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return days.map((d) => dayNames[d - 1]).join(', ');
+  }
+}
+
+/// Widget to show faculty ETA for students
+class _FacultyETAWidget extends StatelessWidget {
+  final ClassModel classModel;
+  
+  const _FacultyETAWidget({required this.classModel});
+  
+  @override
+  Widget build(BuildContext context) {
+    final trackingService = FacultyTrackingService();
+    
+    // Check if class is within 1 hour
+    final now = DateTime.now();
+    final classStartMinutes = classModel.startTime.hour * 60 + classModel.startTime.minute;
+    final nowMinutes = now.hour * 60 + now.minute;
+    final minutesUntilClass = classStartMinutes - nowMinutes;
+    final isClassToday = classModel.daysOfWeek.contains(now.weekday);
+    final showETA = isClassToday && minutesUntilClass > -30 && minutesUntilClass <= 60;
+    
+    if (!showETA || classModel.facultyId == null) {
+      // Just show faculty name without ETA
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.person, color: Colors.blue),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Instructor',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      Text(
+                        classModel.facultyName ?? 'Unknown',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    
+    // Show ETA tracking
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: StreamBuilder<FacultyLocation?>(
+            stream: trackingService.getFacultyLocationStream(classModel.facultyId!),
+            builder: (context, snapshot) {
+              final facultyLocation = snapshot.data;
+              ETAInfo? etaInfo;
+              
+              if (facultyLocation != null && classModel.campusLocation != null) {
+                etaInfo = trackingService.calculateETA(
+                  facultyLocation,
+                  classModel.campusLocation!,
+                );
+              }
+              
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.person, color: Colors.blue),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Instructor',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            Text(
+                              classModel.facultyName ?? 'Unknown',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (etaInfo != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: etaInfo.etaMinutes <= 5 
+                                ? Colors.green.withOpacity(0.1)
+                                : Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.directions_car,
+                                size: 16,
+                                color: etaInfo.etaMinutes <= 5 ? Colors.green : Colors.orange,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                etaInfo.formattedETA,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: etaInfo.etaMinutes <= 5 ? Colors.green : Colors.orange,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else if (snapshot.connectionState == ConnectionState.waiting) ...[
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ] else ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            'Location unavailable',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (etaInfo != null) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on, size: 16, color: Colors.grey[500]),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${etaInfo.formattedDistance} away',
+                          style: GoogleFonts.albertSans(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const Spacer(),
+                        if (etaInfo.isStale)
+                          Text(
+                            'Last updated ${_formatLastUpdated(etaInfo.lastUpdated)}',
+                            style: GoogleFonts.albertSans(
+                              fontSize: 11,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+  
+  String _formatLastUpdated(DateTime time) {
+    final diff = DateTime.now().difference(time);
+    if (diff.inMinutes < 1) return 'just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    return '${diff.inHours}h ago';
   }
 }

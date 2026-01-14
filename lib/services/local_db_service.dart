@@ -96,35 +96,9 @@ class LocalDbService {
     return decoded.map((e) => ClassModel.fromMap(e as Map<String, dynamic>)).toList();
   }
 
+  // No sample classes - users create their own or join via invite code
   List<ClassModel> sampleClasses(String userId, bool isStudent) {
-    if (isStudent) return []; // Students don't get sample classes, they join via invite
-    
-    return [
-      ClassModel(
-        id: 'cls-1',
-        userId: userId,
-        name: 'CS 101 Lecture',
-        daysOfWeek: const [1, 3, 5],
-        startTime: const TimeOfDay(hour: 10, minute: 0),
-        endTime: const TimeOfDay(hour: 11, minute: 30),
-        instructorOrRoom: 'Room B201',
-        location: 'Main Building',
-        notes: 'Intro to programming',
-        color: AppColors.classPalette.first,
-        alerts: [
-          AlertModel(timeBefore: const Duration(hours: 24), isEnabled: true),
-          AlertModel(timeBefore: const Duration(minutes: 15), isEnabled: true),
-        ],
-        syncWithGoogle: true,
-        isModifiedLocally: false,
-        lastSyncedAt: DateTime.now().subtract(const Duration(hours: 3)),
-        inviteCode: ClassModel.generateInviteCode(),
-        facultyId: userId,
-        facultyName: 'Faculty',
-        campusLocation: PredefinedCampuses.campuses.first,
-        enrolledStudentIds: [],
-      ),
-    ];
+    return []; // Return empty list - no hardcoded data
   }
 
   // Schedule methods
