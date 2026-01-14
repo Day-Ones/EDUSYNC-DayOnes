@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'dart:async';
 import '../models/class.dart';
 import '../services/campus_search_service.dart';
 import '../services/campus_cache_service.dart';
@@ -23,8 +24,10 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
   List<CampusLocationModel> _searchResults = [];
   bool _isSearching = false;
   CampusLocationModel? _selectedLocation;
+  Timer? _debounceTimer;
+  String? _searchError;
   
-  // Default to PUP Taguig Campus
+  // Default to PUP Taguig Campus area
   static const LatLng _defaultLocation = LatLng(14.5176, 121.0509);
   LatLng _currentCenter = _defaultLocation;
   double _currentZoom = 14.0;
@@ -32,22 +35,59 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
   Future<void> _searchLocation(String query) async {
     if (query.trim().isEmpty) {
-      setState(() => _searchResults = []);
+      setState(() {
+        _searchResults = [];
+        _searchError = null;
+      });
       return;
     }
     
-    setState(() => _isSearching = true);
-    
-    final results = await _campusSearchService.searchLocation(query);
-    
     setState(() {
-      _searchResults = results;
-      _isSearching = false;
+      _isSearching = true;
+      _searchError = null;
+    });
+    
+    try {
+      // Use the Philippine schools search for better results
+      final results = await _campusSearchService.searchPhilippineSchools(query);
+      
+      if (mounted) {
+        setState(() {
+          _searchResults = results;
+          _isSearching = false;
+          _searchError = results.isEmpty ? 'No results found. Try a different search term.' : null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSearching = false;
+          _searchError = 'Search failed. Please check your internet connection.';
+        });
+      }
+    }
+  }
+
+  void _onSearchChanged(String value) {
+    _debounceTimer?.cancel();
+    
+    if (value.length < 2) {
+      setState(() {
+        _searchResults = [];
+        _searchError = null;
+      });
+      return;
+    }
+    
+    // Debounce search to avoid too many API calls
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      _searchLocation(value);
     });
   }
 
@@ -55,11 +95,13 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
     setState(() {
       _selectedLocation = location;
       _searchResults = [];
+      _searchError = null;
       _searchController.text = location.name;
       _currentCenter = LatLng(location.latitude, location.longitude);
     });
     
     _mapController.move(LatLng(location.latitude, location.longitude), 16);
+    FocusScope.of(context).unfocus();
   }
 
   void _onMapTap(TapPosition tapPosition, LatLng position) {
@@ -69,7 +111,9 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
         latitude: position.latitude,
         longitude: position.longitude,
       );
+      _searchResults = [];
     });
+    FocusScope.of(context).unfocus();
   }
 
   Future<void> _confirmSelection() async {
@@ -91,7 +135,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
             content: TextField(
               controller: controller,
               decoration: const InputDecoration(
-                hintText: 'e.g., My University',
+                hintText: 'e.g., PUP Taguig Campus',
                 border: OutlineInputBorder(),
               ),
               autofocus: true,
@@ -130,9 +174,25 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Search Campus', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
         backgroundColor: const Color(0xFF2196F3),
-        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white24,
+              ),
+              child: const Icon(
+                Icons.chevron_left,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+          ),
+        ),
       ),
       body: Stack(
         children: [
@@ -176,7 +236,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -185,7 +245,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: 'Search for school or location...',
+                      hintText: 'Search PH schools (e.g., TUP, PUP, UST)...',
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _isSearching
                           ? const Padding(
@@ -201,35 +261,33 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
                                   icon: const Icon(Icons.clear),
                                   onPressed: () {
                                     _searchController.clear();
-                                    setState(() => _searchResults = []);
+                                    setState(() {
+                                      _searchResults = [];
+                                      _searchError = null;
+                                    });
                                   },
                                 )
                               : null,
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     ),
-                    onChanged: (value) {
-                      if (value.length >= 3) {
-                        _searchLocation(value);
-                      } else {
-                        setState(() => _searchResults = []);
-                      }
-                    },
+                    onChanged: _onSearchChanged,
                     onSubmitted: _searchLocation,
+                    textInputAction: TextInputAction.search,
                   ),
                 ),
                 
-                // Search Results
+                // Search Results or Error
                 if (_searchResults.isNotEmpty)
                   Container(
                     margin: const EdgeInsets.only(top: 4),
-                    constraints: const BoxConstraints(maxHeight: 200),
+                    constraints: const BoxConstraints(maxHeight: 250),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(8),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withValues(alpha: 0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 2),
                         ),
@@ -241,7 +299,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
                       itemBuilder: (ctx, index) {
                         final result = _searchResults[index];
                         return ListTile(
-                          leading: const Icon(Icons.location_on, color: Color(0xFF2196F3)),
+                          leading: const Icon(Icons.school, color: Color(0xFF2196F3)),
                           title: Text(
                             result.name,
                             maxLines: 2,
@@ -252,6 +310,39 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
                           onTap: () => _selectSearchResult(result),
                         );
                       },
+                    ),
+                  )
+                else if (_searchError != null && _searchController.text.isNotEmpty && !_isSearching)
+                  Container(
+                    margin: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(Icons.search_off, color: Colors.grey[400], size: 32),
+                        const SizedBox(height: 8),
+                        Text(
+                          _searchError!,
+                          style: GoogleFonts.albertSans(color: Colors.grey[600], fontSize: 13),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Tip: Try full names like "Technological University of the Philippines" or tap on the map to select manually.',
+                          style: GoogleFonts.albertSans(color: Colors.grey[500], fontSize: 11),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
                   ),
               ],
@@ -266,6 +357,8 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
               children: [
                 FloatingActionButton.small(
                   heroTag: 'zoom_in',
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF2196F3),
                   onPressed: () {
                     _mapController.move(_mapController.camera.center, _mapController.camera.zoom + 1);
                   },
@@ -274,6 +367,8 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
                 const SizedBox(height: 8),
                 FloatingActionButton.small(
                   heroTag: 'zoom_out',
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF2196F3),
                   onPressed: () {
                     _mapController.move(_mapController.camera.center, _mapController.camera.zoom - 1);
                   },
@@ -296,7 +391,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black.withValues(alpha: 0.1),
                       blurRadius: 10,
                       offset: const Offset(0, -2),
                     ),
