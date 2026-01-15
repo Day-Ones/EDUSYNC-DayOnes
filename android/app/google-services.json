@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "293968934774-1er3oque0okfdaspvg9vaonv2h8r8sp5.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.dayones.edusync",
+            "certificate_hash": "f0f06f9fd9f9be2505c7d24594187d49d35e7739"
+          }
+        },
+        {
           "client_id": "293968934774-dfivklq8uumm8seff2gehqvlf9bm1j64.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

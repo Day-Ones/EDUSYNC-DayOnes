@@ -2,22 +2,86 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/class.dart';
 import '../models/user.dart';
+import '../models/attendance.dart';
 import '../providers/auth_provider.dart';
 import '../providers/class_provider.dart';
 import '../services/faculty_tracking_service.dart';
+import '../services/attendance_time_service.dart';
 import 'add_edit_class_screen.dart';
 import 'student_list_screen.dart';
 import 'attendance_scanner_screen.dart';
 
-class ClassDetailsScreen extends StatelessWidget {
+class ClassDetailsScreen extends StatefulWidget {
   const ClassDetailsScreen({super.key});
   static const routeName = '/class-details';
 
   @override
+  State<ClassDetailsScreen> createState() => _ClassDetailsScreenState();
+}
+
+class _ClassDetailsScreenState extends State<ClassDetailsScreen> {
+  bool _hasCheckedInToday = false;
+  bool _checkingAttendance = true;
+  AttendanceStatus? _todayStatus;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _checkTodayAttendance();
+  }
+
+  Future<void> _checkTodayAttendance() async {
+    final argClassModel =
+        ModalRoute.of(context)?.settings.arguments as ClassModel?;
+    if (argClassModel == null) return;
+
+    final auth = context.read<AuthProvider>();
+    final user = auth.user;
+
+    if (user == null || user.userType == UserType.faculty) {
+      setState(() => _checkingAttendance = false);
+      return;
+    }
+
+    try {
+      final today = DateTime.now();
+      final dateKey =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final recordId = '${argClassModel.id}_${user.id}_$dateKey';
+
+      final doc = await FirebaseFirestore.instance
+          .collection('attendance_records')
+          .doc(recordId)
+          .get();
+
+      if (mounted) {
+        setState(() {
+          _hasCheckedInToday = doc.exists;
+          if (doc.exists) {
+            final data = doc.data() as Map<String, dynamic>?;
+            final statusStr = data?['status'] as String?;
+            _todayStatus = AttendanceStatus.values.firstWhere(
+              (e) => e.name == statusStr,
+              orElse: () => AttendanceStatus.present,
+            );
+          }
+          _checkingAttendance = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _checkingAttendance = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final argClassModel = ModalRoute.of(context)?.settings.arguments as ClassModel?;
+    final argClassModel =
+        ModalRoute.of(context)?.settings.arguments as ClassModel?;
     if (argClassModel == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Class Details')),
@@ -27,13 +91,13 @@ class ClassDetailsScreen extends StatelessWidget {
 
     final auth = context.watch<AuthProvider>();
     final classProvider = context.watch<ClassProvider>();
-    
+
     // Get the latest class data from provider (for real-time updates after editing)
     final classModel = classProvider.classes.firstWhere(
       (c) => c.id == argClassModel.id,
       orElse: () => argClassModel,
     );
-    
+
     final user = auth.user;
     final isFaculty = user?.userType == UserType.faculty;
     final isOwner = classModel.userId == user?.id;
@@ -92,7 +156,8 @@ class ClassDetailsScreen extends StatelessWidget {
                         ),
                         TextButton(
                           onPressed: () => Navigator.pop(ctx, true),
-                          child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                          child: const Text('Delete',
+                              style: TextStyle(color: Colors.red)),
                         ),
                       ],
                     ),
@@ -159,7 +224,8 @@ class ClassDetailsScreen extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      Icon(Icons.calendar_today, size: 18, color: Colors.grey[600]),
+                      Icon(Icons.calendar_today,
+                          size: 18, color: Colors.grey[600]),
                       const SizedBox(width: 8),
                       Text(
                         _formatDays(classModel.daysOfWeek),
@@ -175,7 +241,9 @@ class ClassDetailsScreen extends StatelessWidget {
             ),
 
             // Faculty Status (for students) with ETA
-            if (!isFaculty && classModel.facultyName != null && classModel.facultyId != null) ...[
+            if (!isFaculty &&
+                classModel.facultyName != null &&
+                classModel.facultyId != null) ...[
               _FacultyETAWidget(classModel: classModel),
             ],
 
@@ -185,7 +253,8 @@ class ClassDetailsScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Card(
                   elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -208,7 +277,8 @@ class ClassDetailsScreen extends StatelessWidget {
                                 color: Colors.green.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Icon(Icons.location_on, color: Colors.green),
+                              child: const Icon(Icons.location_on,
+                                  color: Colors.green),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
@@ -222,7 +292,8 @@ class ClassDetailsScreen extends StatelessWidget {
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  if (classModel.campusLocation!.building != null)
+                                  if (classModel.campusLocation!.building !=
+                                      null)
                                     Text(
                                       classModel.campusLocation!.building!,
                                       style: GoogleFonts.albertSans(
@@ -256,7 +327,8 @@ class ClassDetailsScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (classModel.location.isNotEmpty) ...[
-                    _buildInfoRow(Icons.business, 'Building', classModel.location),
+                    _buildInfoRow(
+                        Icons.business, 'Building', classModel.location),
                     const SizedBox(height: 12),
                   ],
                   if (classModel.instructorOrRoom.isNotEmpty) ...[
@@ -311,7 +383,8 @@ class ClassDetailsScreen extends StatelessWidget {
                 child: Card(
                   elevation: 2,
                   color: Colors.green.withValues(alpha: 0.05),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   child: InkWell(
                     onTap: () => Navigator.pushNamed(
                       context,
@@ -329,7 +402,8 @@ class ClassDetailsScreen extends StatelessWidget {
                               color: Colors.green.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Icon(Icons.qr_code, color: Colors.green, size: 28),
+                            child: const Icon(Icons.qr_code,
+                                color: Colors.green, size: 28),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
@@ -353,7 +427,8 @@ class ClassDetailsScreen extends StatelessWidget {
                               ],
                             ),
                           ),
-                          const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                          const Icon(Icons.arrow_forward_ios,
+                              size: 16, color: Colors.grey),
                         ],
                       ),
                     ),
@@ -364,56 +439,19 @@ class ClassDetailsScreen extends StatelessWidget {
             ],
 
             // Student Attendance Check-in (for enrolled students)
-            if (!isFaculty && classModel.enrolledStudentIds.contains(user?.id)) ...[
+            if (!isFaculty &&
+                classModel.enrolledStudentIds.contains(user?.id)) ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Card(
-                  elevation: 2,
-                  color: const Color(0xFF2196F3).withValues(alpha: 0.05),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: InkWell(
-                    onTap: () => Navigator.pushNamed(context, AttendanceScannerScreen.routeName),
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF2196F3).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Icon(Icons.qr_code_scanner, color: Color(0xFF2196F3), size: 28),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Check-in Attendance',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                Text(
-                                  'Scan QR code to mark your attendance',
-                                  style: GoogleFonts.albertSans(
-                                    fontSize: 13,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                child: _checkingAttendance
+                    ? const Card(
+                        elevation: 2,
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                      )
+                    : _buildAttendanceCard(classModel),
               ),
               const SizedBox(height: 16),
             ],
@@ -425,7 +463,8 @@ class ClassDetailsScreen extends StatelessWidget {
                 child: Card(
                   elevation: 2,
                   color: const Color(0xFF2196F3).withValues(alpha: 0.05),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -443,7 +482,8 @@ class ClassDetailsScreen extends StatelessWidget {
                             ),
                             const Spacer(),
                             TextButton.icon(
-                              onPressed: () => _showInviteCodeDialog(context, classModel.inviteCode!),
+                              onPressed: () => _showInviteCodeDialog(
+                                  context, classModel.inviteCode!),
                               icon: const Icon(Icons.share, size: 18),
                               label: const Text('Share'),
                             ),
@@ -451,7 +491,8 @@ class ClassDetailsScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 20, vertical: 12),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(8),
@@ -471,11 +512,14 @@ class ClassDetailsScreen extends StatelessWidget {
                               ),
                               const SizedBox(width: 12),
                               IconButton(
-                                icon: const Icon(Icons.copy, color: Color(0xFF2196F3)),
+                                icon: const Icon(Icons.copy,
+                                    color: Color(0xFF2196F3)),
                                 onPressed: () {
-                                  Clipboard.setData(ClipboardData(text: classModel.inviteCode!));
+                                  Clipboard.setData(ClipboardData(
+                                      text: classModel.inviteCode!));
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Code copied!')),
+                                    const SnackBar(
+                                        content: Text('Code copied!')),
                                   );
                                 },
                               ),
@@ -498,7 +542,8 @@ class ClassDetailsScreen extends StatelessWidget {
                       context: context,
                       builder: (context) => AlertDialog(
                         title: const Text('Leave Class'),
-                        content: const Text('Are you sure you want to leave this class?'),
+                        content: const Text(
+                            'Are you sure you want to leave this class?'),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context, false),
@@ -506,7 +551,8 @@ class ClassDetailsScreen extends StatelessWidget {
                           ),
                           TextButton(
                             onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Leave', style: TextStyle(color: Colors.red)),
+                            child: const Text('Leave',
+                                style: TextStyle(color: Colors.red)),
                           ),
                         ],
                       ),
@@ -516,13 +562,15 @@ class ClassDetailsScreen extends StatelessWidget {
                       if (context.mounted) {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('You have left the class')),
+                          const SnackBar(
+                              content: Text('You have left the class')),
                         );
                       }
                     }
                   },
                   icon: const Icon(Icons.exit_to_app, color: Colors.red),
-                  label: const Text('Leave Class', style: TextStyle(color: Colors.red)),
+                  label: const Text('Leave Class',
+                      style: TextStyle(color: Colors.red)),
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.red),
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -636,33 +684,150 @@ class ClassDetailsScreen extends StatelessWidget {
     const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return days.map((d) => dayNames[d - 1]).join(', ');
   }
+
+  Widget _buildAttendanceCard(ClassModel classModel) {
+    final now = DateTime.now();
+    final canCheckIn = AttendanceTimeService.canCheckIn(classModel, now);
+
+    // Determine card appearance based on status
+    Color cardColor;
+    Color iconColor;
+    IconData icon;
+    String title;
+    String subtitle;
+    bool isClickable;
+
+    if (_hasCheckedInToday) {
+      // Already checked in - show status-based message
+      if (_todayStatus == AttendanceStatus.late) {
+        cardColor = Colors.orange.withValues(alpha: 0.05);
+        iconColor = Colors.orange;
+        icon = Icons.schedule;
+        title = 'Checked In - Late';
+        subtitle =
+            'You clutched today\'s attendance! You can be earlier next time.';
+        isClickable = false;
+      } else if (_todayStatus == AttendanceStatus.present) {
+        cardColor = Colors.green.withValues(alpha: 0.05);
+        iconColor = Colors.green;
+        icon = Icons.check_circle;
+        title = 'Checked In - Present';
+        subtitle = 'You are present on today\'s class, keep it up!';
+        isClickable = false;
+      } else {
+        // Shouldn't happen, but just in case
+        cardColor = Colors.green.withValues(alpha: 0.05);
+        iconColor = Colors.green;
+        icon = Icons.check_circle;
+        title = 'Already Checked In';
+        subtitle = 'You have already checked in for today';
+        isClickable = false;
+      }
+    } else if (canCheckIn) {
+      // Can still check in
+      cardColor = const Color(0xFF2196F3).withValues(alpha: 0.05);
+      iconColor = const Color(0xFF2196F3);
+      icon = Icons.qr_code_scanner;
+      title = 'Check-in Attendance';
+      subtitle = 'Scan QR code to mark your attendance';
+      isClickable = true;
+    } else {
+      // Check-in window closed - marked as absent
+      cardColor = Colors.red.withValues(alpha: 0.05);
+      iconColor = Colors.red;
+      icon = Icons.cancel;
+      title = 'Absent';
+      subtitle = 'You are absent today. Be sure to go to class next time.';
+      isClickable = false;
+    }
+
+    return Card(
+      elevation: 2,
+      color: cardColor,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: isClickable
+            ? () => Navigator.pushNamed(
+                  context,
+                  AttendanceScannerScreen.routeName,
+                  arguments: classModel,
+                )
+            : null,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: iconColor, size: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: iconColor,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.albertSans(
+                        fontSize: 13,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isClickable)
+                const Icon(Icons.arrow_forward_ios,
+                    size: 16, color: Colors.grey),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Widget to show faculty ETA for students
 class _FacultyETAWidget extends StatelessWidget {
   final ClassModel classModel;
-  
+
   const _FacultyETAWidget({required this.classModel});
-  
+
   @override
   Widget build(BuildContext context) {
     final trackingService = FacultyTrackingService();
-    
+
     // Check if class is within 1 hour
     final now = DateTime.now();
-    final classStartMinutes = classModel.startTime.hour * 60 + classModel.startTime.minute;
+    final classStartMinutes =
+        classModel.startTime.hour * 60 + classModel.startTime.minute;
     final nowMinutes = now.hour * 60 + now.minute;
     final minutesUntilClass = classStartMinutes - nowMinutes;
     final isClassToday = classModel.daysOfWeek.contains(now.weekday);
-    final showETA = isClassToday && minutesUntilClass > -30 && minutesUntilClass <= 60;
-    
+    final showETA =
+        isClassToday && minutesUntilClass > -30 && minutesUntilClass <= 60;
+
     if (!showETA || classModel.facultyId == null) {
       // Just show faculty name without ETA
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Card(
           elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
@@ -703,7 +868,7 @@ class _FacultyETAWidget extends StatelessWidget {
         ),
       );
     }
-    
+
     // Show ETA tracking
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -713,18 +878,20 @@ class _FacultyETAWidget extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: StreamBuilder<FacultyLocation?>(
-            stream: trackingService.getFacultyLocationStream(classModel.facultyId!),
+            stream:
+                trackingService.getFacultyLocationStream(classModel.facultyId!),
             builder: (context, snapshot) {
               final facultyLocation = snapshot.data;
               ETAInfo? etaInfo;
-              
-              if (facultyLocation != null && classModel.campusLocation != null) {
+
+              if (facultyLocation != null &&
+                  classModel.campusLocation != null) {
                 etaInfo = trackingService.calculateETA(
                   facultyLocation,
                   classModel.campusLocation!,
                 );
               }
-              
+
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -762,9 +929,10 @@ class _FacultyETAWidget extends StatelessWidget {
                       ),
                       if (etaInfo != null) ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: etaInfo.etaMinutes <= 5 
+                            color: etaInfo.etaMinutes <= 5
                                 ? Colors.green.withValues(alpha: 0.1)
                                 : Colors.orange.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
@@ -775,7 +943,9 @@ class _FacultyETAWidget extends StatelessWidget {
                               Icon(
                                 Icons.directions_car,
                                 size: 16,
-                                color: etaInfo.etaMinutes <= 5 ? Colors.green : Colors.orange,
+                                color: etaInfo.etaMinutes <= 5
+                                    ? Colors.green
+                                    : Colors.orange,
                               ),
                               const SizedBox(width: 4),
                               Text(
@@ -783,13 +953,16 @@ class _FacultyETAWidget extends StatelessWidget {
                                 style: GoogleFonts.poppins(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
-                                  color: etaInfo.etaMinutes <= 5 ? Colors.green : Colors.orange,
+                                  color: etaInfo.etaMinutes <= 5
+                                      ? Colors.green
+                                      : Colors.orange,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ] else if (snapshot.connectionState == ConnectionState.waiting) ...[
+                      ] else if (snapshot.connectionState ==
+                          ConnectionState.waiting) ...[
                         const SizedBox(
                           width: 20,
                           height: 20,
@@ -797,7 +970,8 @@ class _FacultyETAWidget extends StatelessWidget {
                         ),
                       ] else ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
                             color: Colors.grey.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(20),
@@ -817,7 +991,8 @@ class _FacultyETAWidget extends StatelessWidget {
                     const SizedBox(height: 12),
                     Row(
                       children: [
-                        Icon(Icons.location_on, size: 16, color: Colors.grey[500]),
+                        Icon(Icons.location_on,
+                            size: 16, color: Colors.grey[500]),
                         const SizedBox(width: 4),
                         Text(
                           '${etaInfo.formattedDistance} away',
@@ -846,7 +1021,7 @@ class _FacultyETAWidget extends StatelessWidget {
       ),
     );
   }
-  
+
   String _formatLastUpdated(DateTime time) {
     final diff = DateTime.now().difference(time);
     if (diff.inMinutes < 1) return 'just now';

@@ -2,12 +2,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../models/user.dart';
 
 class AuthService {
   AuthService(this._storage);
   final FlutterSecureStorage _storage;
-  
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
@@ -15,8 +16,26 @@ class AuthService {
   static const _keySession = 'auth_session';
   static const _keyUserType = 'auth_user_type';
 
+  /// Check if device is online
+  Future<bool> _isOnline() async {
+    try {
+      final result = await Connectivity().checkConnectivity();
+      return result.contains(ConnectivityResult.mobile) ||
+          result.contains(ConnectivityResult.wifi) ||
+          result.contains(ConnectivityResult.ethernet);
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// Login with email and password
-  Future<UserModel?> login(String email, String password, {required UserType role, bool remember = false}) async {
+  Future<UserModel?> login(String email, String password,
+      {required UserType role, bool remember = false}) async {
+    // Check internet connection first
+    if (!await _isOnline()) {
+      throw Exception('Internet connection required to login');
+    }
+
     try {
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
@@ -26,8 +45,9 @@ class AuthService {
       if (credential.user == null) return null;
 
       // Get user data from Firestore
-      final userDoc = await _firestore.collection('users').doc(credential.user!.uid).get();
-      
+      final userDoc =
+          await _firestore.collection('users').doc(credential.user!.uid).get();
+
       if (!userDoc.exists) {
         // User exists in Auth but not in Firestore - sign out
         await _auth.signOut();
@@ -35,7 +55,9 @@ class AuthService {
       }
 
       final userData = userDoc.data()!;
-      final userType = userData['userType'] == 'faculty' ? UserType.faculty : UserType.student;
+      final userType = userData['userType'] == 'faculty'
+          ? UserType.faculty
+          : UserType.student;
 
       // Check if role matches
       if (userType != role) {
@@ -44,7 +66,7 @@ class AuthService {
       }
 
       final user = _userFromFirestore(credential.user!.uid, userData);
-      
+
       // Save session locally
       await _storage.write(key: _keySession, value: credential.user!.uid);
       await _storage.write(key: _keyUserType, value: role.name);
@@ -66,6 +88,11 @@ class AuthService {
     String? facultyId,
     String? department,
   }) async {
+    // Check internet connection first
+    if (!await _isOnline()) {
+      throw Exception('Internet connection required to sign up');
+    }
+
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -87,7 +114,10 @@ class AuthService {
         'createdAt': FieldValue.serverTimestamp(),
       };
 
-      await _firestore.collection('users').doc(credential.user!.uid).set(userData);
+      await _firestore
+          .collection('users')
+          .doc(credential.user!.uid)
+          .set(userData);
 
       final user = UserModel(
         id: credential.user!.uid,
@@ -112,17 +142,27 @@ class AuthService {
   }
 
   /// Sign in with Google
-  Future<Map<String, dynamic>> signInWithGoogle({required UserType role}) async {
+  Future<Map<String, dynamic>> signInWithGoogle(
+      {required UserType role}) async {
+    // Check internet connection first
+    if (!await _isOnline()) {
+      return {
+        'success': false,
+        'message': 'Internet connection required to login'
+      };
+    }
+
     try {
       // Trigger Google Sign-In flow
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      
+
       if (googleUser == null) {
         return {'success': false, 'message': 'Google sign-in cancelled'};
       }
 
       // Get auth details
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       // Create Firebase credential
       final credential = GoogleAuthProvider.credential(
@@ -132,30 +172,36 @@ class AuthService {
 
       // Sign in to Firebase
       final userCredential = await _auth.signInWithCredential(credential);
-      
+
       if (userCredential.user == null) {
         return {'success': false, 'message': 'Failed to sign in with Google'};
       }
 
       // Check if user exists in Firestore
-      final userDoc = await _firestore.collection('users').doc(userCredential.user!.uid).get();
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .get();
 
       if (userDoc.exists) {
         // Existing user - check role
         final userData = userDoc.data()!;
-        final existingRole = userData['userType'] == 'faculty' ? UserType.faculty : UserType.student;
-        
+        final existingRole = userData['userType'] == 'faculty'
+            ? UserType.faculty
+            : UserType.student;
+
         if (existingRole != role) {
           await _auth.signOut();
           await _googleSignIn.signOut();
           return {
             'success': false,
-            'message': 'This Google account is registered as ${existingRole.name}. Please select the correct role.',
+            'message':
+                'This Google account is registered as ${existingRole.name}. Please select the correct role.',
           };
         }
 
         final user = _userFromFirestore(userCredential.user!.uid, userData);
-        
+
         await _storage.write(key: _keySession, value: userCredential.user!.uid);
         await _storage.write(key: _keyUserType, value: role.name);
 
@@ -172,7 +218,10 @@ class AuthService {
           'createdAt': FieldValue.serverTimestamp(),
         };
 
-        await _firestore.collection('users').doc(userCredential.user!.uid).set(userData);
+        await _firestore
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set(userData);
 
         final user = UserModel(
           id: userCredential.user!.uid,
@@ -199,9 +248,10 @@ class AuthService {
     try {
       // Check Firebase Auth state first
       final firebaseUser = _auth.currentUser;
-      
+
       if (firebaseUser != null) {
-        final userDoc = await _firestore.collection('users').doc(firebaseUser.uid).get();
+        final userDoc =
+            await _firestore.collection('users').doc(firebaseUser.uid).get();
         if (userDoc.exists) {
           return _userFromFirestore(firebaseUser.uid, userDoc.data()!);
         }
@@ -235,7 +285,8 @@ class AuthService {
       id: id,
       email: data['email'] ?? '',
       fullName: data['fullName'] ?? '',
-      userType: data['userType'] == 'faculty' ? UserType.faculty : UserType.student,
+      userType:
+          data['userType'] == 'faculty' ? UserType.faculty : UserType.student,
       studentId: data['studentId'],
       facultyId: data['facultyId'],
       department: data['department'],

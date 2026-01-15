@@ -27,7 +27,7 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
   final _notes = TextEditingController();
   final _roomController = TextEditingController();
   final _cacheService = CampusCacheService();
-  
+
   TimeOfDay _start = const TimeOfDay(hour: 9, minute: 0);
   TimeOfDay _end = const TimeOfDay(hour: 10, minute: 0);
   final Set<int> _days = {1, 3, 5};
@@ -36,12 +36,14 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
   bool _syncToGoogle = true;
   bool _includeAlerts = true;
   bool _hasConflict = false;
-  
+
   CampusLocationModel? _selectedCampus;
   List<CampusLocationModel> _recentSearches = [];
   String? _inviteCode;
   ClassModel? _editingClass;
   bool _isEditing = false;
+  int _lateGracePeriodMinutes = 10;
+  int _absentGracePeriodMinutes = 30;
 
   @override
   void initState() {
@@ -71,11 +73,14 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
       _days.addAll(args.daysOfWeek);
       _color = args.color;
       _inviteCode = args.inviteCode;
+      _lateGracePeriodMinutes = args.lateGracePeriodMinutes;
+      _absentGracePeriodMinutes = args.absentGracePeriodMinutes;
       if (args.campusLocation != null) {
         _selectedCampus = args.campusLocation;
         _roomController.text = args.campusLocation!.room ?? '';
       }
-      _alertEnabled = args.alerts.isNotEmpty && args.alerts.any((a) => a.isEnabled);
+      _alertEnabled =
+          args.alerts.isNotEmpty && args.alerts.any((a) => a.isEnabled);
       _syncToGoogle = args.syncWithGoogle;
     }
   }
@@ -91,17 +96,23 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
   }
 
   Future<void> _pickTime(bool start) async {
-    final picked = await showTimePicker(context: context, initialTime: start ? _start : _end);
+    final picked = await showTimePicker(
+        context: context, initialTime: start ? _start : _end);
     if (picked != null) {
       setState(() {
-        if (start) _start = picked; else _end = picked;
-        _hasConflict = _start.hour > _end.hour || (_start.hour == _end.hour && _start.minute >= _end.minute);
+        if (start)
+          _start = picked;
+        else
+          _end = picked;
+        _hasConflict = _start.hour > _end.hour ||
+            (_start.hour == _end.hour && _start.minute >= _end.minute);
       });
     }
   }
 
   Future<void> _openMapSearch() async {
-    final result = await Navigator.pushNamed(context, MapSearchScreen.routeName) as CampusLocationModel?;
+    final result = await Navigator.pushNamed(context, MapSearchScreen.routeName)
+        as CampusLocationModel?;
     if (result != null) {
       setState(() => _selectedCampus = result);
       await _loadRecentSearches();
@@ -112,7 +123,8 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
       builder: (ctx) => DraggableScrollableSheet(
         initialChildSize: 0.6,
         minChildSize: 0.4,
@@ -124,14 +136,25 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4)],
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withOpacity(0.05), blurRadius: 4)
+                ],
               ),
               child: Column(
                 children: [
-                  Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
+                  Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2))),
                   const SizedBox(height: 16),
-                  Text('Select Campus', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
+                  Text('Select Campus',
+                      style: GoogleFonts.poppins(
+                          fontSize: 18, fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
@@ -143,12 +166,19 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                   ListTile(
                     leading: Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(color: const Color(0xFF2196F3).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(
+                          color: const Color(0xFF2196F3).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8)),
                       child: const Icon(Icons.map, color: Color(0xFF2196F3)),
                     ),
-                    title: Text('Search on Maps', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: const Color(0xFF2196F3))),
-                    subtitle: Text('Find any location on the map', style: GoogleFonts.albertSans(fontSize: 12)),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF2196F3)),
+                    title: Text('Search on Maps',
+                        style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF2196F3))),
+                    subtitle: Text('Find any location on the map',
+                        style: GoogleFonts.albertSans(fontSize: 12)),
+                    trailing: const Icon(Icons.arrow_forward_ios,
+                        size: 16, color: Color(0xFF2196F3)),
                     onTap: () {
                       Navigator.pop(ctx);
                       _openMapSearch();
@@ -158,33 +188,58 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                   if (PredefinedCampuses.campuses.isNotEmpty) ...[
                     Padding(
                       padding: const EdgeInsets.only(left: 8, bottom: 8),
-                      child: Text('Predefined Campuses', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[600])),
+                      child: Text('Predefined Campuses',
+                          style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[600])),
                     ),
                     ...PredefinedCampuses.campuses.map((campus) => ListTile(
-                      leading: const Icon(Icons.school, color: Color(0xFF2196F3)),
-                      title: Text(campus.name, style: GoogleFonts.poppins(fontWeight: FontWeight.w500)),
-                      subtitle: Text('${campus.latitude.toStringAsFixed(4)}, ${campus.longitude.toStringAsFixed(4)}', style: GoogleFonts.albertSans(fontSize: 12, color: Colors.grey[600])),
-                      onTap: () {
-                        setState(() => _selectedCampus = campus);
-                        Navigator.pop(ctx);
-                      },
-                    )),
+                          leading: const Icon(Icons.school,
+                              color: Color(0xFF2196F3)),
+                          title: Text(campus.name,
+                              style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w500)),
+                          subtitle: Text(
+                              '${campus.latitude.toStringAsFixed(4)}, ${campus.longitude.toStringAsFixed(4)}',
+                              style: GoogleFonts.albertSans(
+                                  fontSize: 12, color: Colors.grey[600])),
+                          onTap: () {
+                            setState(() => _selectedCampus = campus);
+                            Navigator.pop(ctx);
+                          },
+                        )),
                   ],
                   if (_recentSearches.isNotEmpty) ...[
                     const SizedBox(height: 16),
                     Padding(
                       padding: const EdgeInsets.only(left: 8, bottom: 8),
-                      child: Text('Recent Searches', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey[600])),
+                      child: Text('Recent Searches',
+                          style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[600])),
                     ),
-                    ..._recentSearches.where((r) => !PredefinedCampuses.campuses.any((c) => c.name == r.name)).map((campus) => ListTile(
-                      leading: const Icon(Icons.history, color: Colors.grey),
-                      title: Text(campus.name, style: GoogleFonts.poppins(fontWeight: FontWeight.w500), maxLines: 1, overflow: TextOverflow.ellipsis),
-                      subtitle: Text('${campus.latitude.toStringAsFixed(4)}, ${campus.longitude.toStringAsFixed(4)}', style: GoogleFonts.albertSans(fontSize: 12, color: Colors.grey[600])),
-                      onTap: () {
-                        setState(() => _selectedCampus = campus);
-                        Navigator.pop(ctx);
-                      },
-                    )),
+                    ..._recentSearches
+                        .where((r) => !PredefinedCampuses.campuses
+                            .any((c) => c.name == r.name))
+                        .map((campus) => ListTile(
+                              leading:
+                                  const Icon(Icons.history, color: Colors.grey),
+                              title: Text(campus.name,
+                                  style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w500),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                              subtitle: Text(
+                                  '${campus.latitude.toStringAsFixed(4)}, ${campus.longitude.toStringAsFixed(4)}',
+                                  style: GoogleFonts.albertSans(
+                                      fontSize: 12, color: Colors.grey[600])),
+                              onTap: () {
+                                setState(() => _selectedCampus = campus);
+                                Navigator.pop(ctx);
+                              },
+                            )),
                   ],
                   const SizedBox(height: 24),
                 ],
@@ -201,90 +256,106 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
     final classProvider = context.read<ClassProvider>();
     final user = auth.user;
     final isFaculty = user?.userType == UserType.faculty;
-    
-    if (_hasConflict) { 
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Resolve time conflict first'))); 
-      return; 
+
+    if (_hasConflict) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Resolve time conflict first')));
+      return;
     }
     if (!_formKey.currentState!.validate()) return;
     if (user == null) return;
-    if (_days.isEmpty) { 
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select at least one day'))); 
-      return; 
+    if (_days.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select at least one day')));
+      return;
     }
-    
-    final alerts = _alertEnabled 
+
+    final alerts = _alertEnabled
         ? [AlertModel(timeBefore: const Duration(minutes: 15), isEnabled: true)]
         : <AlertModel>[];
     CampusLocationModel? campusWithRoom;
     if (isFaculty && _selectedCampus != null) {
       campusWithRoom = CampusLocationModel(
-        name: _selectedCampus!.name, 
-        latitude: _selectedCampus!.latitude, 
-        longitude: _selectedCampus!.longitude, 
-        building: _selectedCampus!.building, 
+        name: _selectedCampus!.name,
+        latitude: _selectedCampus!.latitude,
+        longitude: _selectedCampus!.longitude,
+        building: _selectedCampus!.building,
         room: _roomController.text.isNotEmpty ? _roomController.text : null,
       );
     }
-    final code = isFaculty ? (_inviteCode ?? ClassModel.generateInviteCode()) : null;
+    final code =
+        isFaculty ? (_inviteCode ?? ClassModel.generateInviteCode()) : null;
     final model = ClassModel(
       id: _editingClass?.id ?? UniqueKey().toString(),
-      userId: user.id, 
-      name: _name.text, 
-      daysOfWeek: _days.toList(), 
-      startTime: _start, 
+      userId: user.id,
+      name: _name.text,
+      daysOfWeek: _days.toList(),
+      startTime: _start,
       endTime: _end,
-      instructorOrRoom: isFaculty ? _roomController.text : _instructor.text, 
-      location: _location.text, 
-      notes: _notes.text, 
-      color: _color, 
+      instructorOrRoom: isFaculty ? _roomController.text : _instructor.text,
+      location: _location.text,
+      notes: _notes.text,
+      color: _color,
       alerts: alerts,
-      syncWithGoogle: _syncToGoogle, 
-      isModifiedLocally: true, 
-      lastSyncedAt: null, 
+      syncWithGoogle: _syncToGoogle,
+      isModifiedLocally: true,
+      lastSyncedAt: null,
       inviteCode: code,
-      facultyId: isFaculty ? user.id : _editingClass?.facultyId, 
+      facultyId: isFaculty ? user.id : _editingClass?.facultyId,
       facultyName: isFaculty ? user.fullName : _editingClass?.facultyName,
-      campusLocation: campusWithRoom, 
+      campusLocation: campusWithRoom,
       enrolledStudentIds: _editingClass?.enrolledStudentIds ?? [],
+      lateGracePeriodMinutes: _lateGracePeriodMinutes,
+      absentGracePeriodMinutes: _absentGracePeriodMinutes,
     );
     await classProvider.addOrUpdate(model);
     if (!mounted) return;
     if (isFaculty && !_isEditing && code != null) {
       _inviteCode = code;
       await showDialog(
-        context: context, 
+        context: context,
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
           title: Row(children: [
-            const Icon(Icons.check_circle, color: Colors.green), 
-            const SizedBox(width: 8), 
+            const Icon(Icons.check_circle, color: Colors.green),
+            const SizedBox(width: 8),
             Text('Class Created!', style: GoogleFonts.poppins(fontSize: 18)),
           ]),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
-            Text('Share this code with your students:', style: GoogleFonts.albertSans(color: Colors.grey[600])),
+            Text('Share this code with your students:',
+                style: GoogleFonts.albertSans(color: Colors.grey[600])),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFF2196F3).withOpacity(0.1), 
-                borderRadius: BorderRadius.circular(12), 
+                color: const Color(0xFF2196F3).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFF2196F3)),
               ),
-              child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text(code, style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.w700, letterSpacing: 4, color: const Color(0xFF2196F3))),
+              child:
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text(code,
+                    style: GoogleFonts.poppins(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 4,
+                        color: const Color(0xFF2196F3))),
                 const SizedBox(width: 12),
                 IconButton(
-                  icon: const Icon(Icons.copy, color: Color(0xFF2196F3)), 
-                  onPressed: () { 
-                    Clipboard.setData(ClipboardData(text: code)); 
-                    ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Code copied'))); 
+                  icon: const Icon(Icons.copy, color: Color(0xFF2196F3)),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: code));
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(content: Text('Code copied')));
                   },
                 ),
               ]),
             ),
           ]),
-          actions: [ElevatedButton(onPressed: () => Navigator.pop(ctx), child: const Text('Done'))],
+          actions: [
+            ElevatedButton(
+                onPressed: () => Navigator.pop(ctx), child: const Text('Done'))
+          ],
         ),
       );
     }
@@ -358,7 +429,9 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _name.text.isEmpty ? (_isEditing ? 'Edit Class' : 'New Class') : _name.text,
+                        _name.text.isEmpty
+                            ? (_isEditing ? 'Edit Class' : 'New Class')
+                            : _name.text,
                         style: GoogleFonts.poppins(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
@@ -367,7 +440,8 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(Icons.schedule, size: 18, color: Colors.grey[600]),
+                          Icon(Icons.schedule,
+                              size: 18, color: Colors.grey[600]),
                           const SizedBox(width: 8),
                           Text(
                             '${_start.format(context)} - ${_end.format(context)}',
@@ -381,7 +455,8 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.calendar_today, size: 18, color: Colors.grey[600]),
+                          Icon(Icons.calendar_today,
+                              size: 18, color: Colors.grey[600]),
                           const SizedBox(width: 8),
                           Text(
                             _formatDays(_days.toList()),
@@ -395,7 +470,7 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                     ],
                   ),
                 ),
-                
+
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -405,108 +480,327 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(color: AppColors.warning.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                          child: const Row(children: [Icon(Icons.warning, color: AppColors.warning), SizedBox(width: 8), Expanded(child: Text('End time must be after start time.'))]),
+                          decoration: BoxDecoration(
+                              color: AppColors.warning.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8)),
+                          child: const Row(children: [
+                            Icon(Icons.warning, color: AppColors.warning),
+                            SizedBox(width: 8),
+                            Expanded(
+                                child:
+                                    Text('End time must be after start time.'))
+                          ]),
                         ),
                       TextFormField(
-                  controller: _name,
-                  decoration: const InputDecoration(labelText: 'Class Name', prefixIcon: Icon(Icons.class_)),
-                  validator: (v) => (v ?? '').isEmpty ? 'Required' : null,
-                ),
-                const SizedBox(height: 16),
-                Text('Days', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  children: List.generate(7, (index) {
-                    final day = index + 1;
-                    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                    return FilterChip(
-                      label: Text(labels[index]),
-                      selected: _days.contains(day),
-                      onSelected: (v) => setState(() => v ? _days.add(day) : _days.remove(day)),
-                      selectedColor: const Color(0xFF2196F3).withOpacity(0.2),
-                    );
-                  }),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(child: ListTile(contentPadding: EdgeInsets.zero, title: const Text('Start Time'), subtitle: Text(_start.format(context)), trailing: const Icon(Icons.access_time), onTap: () => _pickTime(true))),
-                    Expanded(child: ListTile(contentPadding: EdgeInsets.zero, title: const Text('End Time'), subtitle: Text(_end.format(context)), trailing: const Icon(Icons.schedule), onTap: () => _pickTime(false))),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                if (isFaculty) ...[
-                  Text('Campus', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  InkWell(
-                    onTap: _showCampusSelector,
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: _selectedCampus != null ? const Color(0xFF2196F3) : Colors.grey[400]!),
-                        borderRadius: BorderRadius.circular(8),
-                        color: _selectedCampus != null ? const Color(0xFF2196F3).withOpacity(0.05) : null,
+                        controller: _name,
+                        decoration: const InputDecoration(
+                            labelText: 'Class Name',
+                            prefixIcon: Icon(Icons.class_)),
+                        validator: (v) => (v ?? '').isEmpty ? 'Required' : null,
                       ),
-                      child: Row(
+                      const SizedBox(height: 16),
+                      Text('Days',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        children: List.generate(7, (index) {
+                          final day = index + 1;
+                          const labels = [
+                            'Mon',
+                            'Tue',
+                            'Wed',
+                            'Thu',
+                            'Fri',
+                            'Sat',
+                            'Sun'
+                          ];
+                          return FilterChip(
+                            label: Text(labels[index]),
+                            selected: _days.contains(day),
+                            onSelected: (v) => setState(
+                                () => v ? _days.add(day) : _days.remove(day)),
+                            selectedColor:
+                                const Color(0xFF2196F3).withOpacity(0.2),
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
                         children: [
-                          Icon(_selectedCampus != null ? Icons.location_on : Icons.school, color: _selectedCampus != null ? const Color(0xFF2196F3) : Colors.grey[600]),
-                          const SizedBox(width: 12),
                           Expanded(
-                            child: _selectedCampus != null
-                                ? Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(_selectedCampus!.name, style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                                      Text('${_selectedCampus!.latitude.toStringAsFixed(4)}, ${_selectedCampus!.longitude.toStringAsFixed(4)}', style: GoogleFonts.albertSans(fontSize: 12, color: Colors.grey[600])),
-                                    ],
-                                  )
-                                : Text('Select a campus', style: GoogleFonts.albertSans(color: Colors.grey[600])),
-                          ),
-                          if (_selectedCampus != null)
-                            IconButton(icon: const Icon(Icons.close, size: 20), onPressed: () => setState(() => _selectedCampus = null), padding: EdgeInsets.zero, constraints: const BoxConstraints())
-                          else
-                            const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                              child: ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: const Text('Start Time'),
+                                  subtitle: Text(_start.format(context)),
+                                  trailing: const Icon(Icons.access_time),
+                                  onTap: () => _pickTime(true))),
+                          Expanded(
+                              child: ListTile(
+                                  contentPadding: EdgeInsets.zero,
+                                  title: const Text('End Time'),
+                                  subtitle: Text(_end.format(context)),
+                                  trailing: const Icon(Icons.schedule),
+                                  onTap: () => _pickTime(false))),
                         ],
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(controller: _roomController, decoration: InputDecoration(labelText: 'Room Number', prefixIcon: const Icon(Icons.meeting_room), border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)))),
-                  const SizedBox(height: 16),
-                ] else ...[
-                  TextFormField(controller: _instructor, decoration: const InputDecoration(labelText: 'Instructor', prefixIcon: Icon(Icons.person))),
-                  const SizedBox(height: 12),
-                ],
-                TextFormField(controller: _location, decoration: InputDecoration(labelText: isFaculty ? 'Building / Additional Info' : 'Location / Building', prefixIcon: const Icon(Icons.business))),
-                const SizedBox(height: 12),
-                TextFormField(controller: _notes, maxLines: 3, decoration: const InputDecoration(labelText: 'Notes', prefixIcon: Icon(Icons.notes), alignLabelWithHint: true)),
-                const SizedBox(height: 16),
-                Text('Color', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                BlockPicker(pickerColor: _color, availableColors: AppColors.classPalette, onColorChanged: (c) => setState(() => _color = c)),
-                const SizedBox(height: 16),
-                Text('Alerts', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-                SwitchListTile(
-                  value: _alertEnabled, 
-                  onChanged: (v) => setState(() => _alertEnabled = v), 
-                  title: const Text('Enable Class Reminders'),
-                  subtitle: Text(
-                    _alertEnabled ? 'You will be notified 15 minutes before class' : 'No reminders',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  ),
-                  secondary: Icon(
-                    _alertEnabled ? Icons.notifications_active : Icons.notifications_off,
-                    color: _alertEnabled ? const Color(0xFF2196F3) : Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                SwitchListTile(value: _syncToGoogle, onChanged: (v) => setState(() => _syncToGoogle = v), title: const Text('Add to Google Calendar')),
-                CheckboxListTile(value: _includeAlerts, onChanged: (v) => setState(() => _includeAlerts = v ?? true), title: const Text('Include alerts in Google Calendar')),
-                const SizedBox(height: 24),
-                _buildSaveButtons(context, classProvider, user, isFaculty),
+                      const SizedBox(height: 16),
+                      if (isFaculty) ...[
+                        Text('Campus',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: _showCampusSelector,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                  color: _selectedCampus != null
+                                      ? const Color(0xFF2196F3)
+                                      : Colors.grey[400]!),
+                              borderRadius: BorderRadius.circular(8),
+                              color: _selectedCampus != null
+                                  ? const Color(0xFF2196F3).withOpacity(0.05)
+                                  : null,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                    _selectedCampus != null
+                                        ? Icons.location_on
+                                        : Icons.school,
+                                    color: _selectedCampus != null
+                                        ? const Color(0xFF2196F3)
+                                        : Colors.grey[600]),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _selectedCampus != null
+                                      ? Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(_selectedCampus!.name,
+                                                style: GoogleFonts.poppins(
+                                                    fontWeight:
+                                                        FontWeight.w600)),
+                                            Text(
+                                                '${_selectedCampus!.latitude.toStringAsFixed(4)}, ${_selectedCampus!.longitude.toStringAsFixed(4)}',
+                                                style: GoogleFonts.albertSans(
+                                                    fontSize: 12,
+                                                    color: Colors.grey[600])),
+                                          ],
+                                        )
+                                      : Text('Select a campus',
+                                          style: GoogleFonts.albertSans(
+                                              color: Colors.grey[600])),
+                                ),
+                                if (_selectedCampus != null)
+                                  IconButton(
+                                      icon: const Icon(Icons.close, size: 20),
+                                      onPressed: () => setState(
+                                          () => _selectedCampus = null),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints())
+                                else
+                                  const Icon(Icons.arrow_drop_down,
+                                      color: Colors.grey),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                            controller: _roomController,
+                            decoration: InputDecoration(
+                                labelText: 'Room Number',
+                                prefixIcon: const Icon(Icons.meeting_room),
+                                border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8)))),
+                        const SizedBox(height: 16),
+                      ] else ...[
+                        TextFormField(
+                            controller: _instructor,
+                            decoration: const InputDecoration(
+                                labelText: 'Instructor',
+                                prefixIcon: Icon(Icons.person))),
+                        const SizedBox(height: 12),
+                      ],
+                      TextFormField(
+                          controller: _location,
+                          decoration: InputDecoration(
+                              labelText: isFaculty
+                                  ? 'Building / Additional Info'
+                                  : 'Location / Building',
+                              prefixIcon: const Icon(Icons.business))),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                          controller: _notes,
+                          maxLines: 3,
+                          decoration: const InputDecoration(
+                              labelText: 'Notes',
+                              prefixIcon: Icon(Icons.notes),
+                              alignLabelWithHint: true)),
+                      const SizedBox(height: 16),
+                      if (isFaculty) ...[
+                        Text('Attendance Grace Periods',
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Late Grace Period',
+                                            style: GoogleFonts.poppins(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500)),
+                                        Text(
+                                            'Students can check in late within this period',
+                                            style: GoogleFonts.albertSans(
+                                                fontSize: 12,
+                                                color: Colors.grey[600])),
+                                      ],
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 100,
+                                    child: DropdownButtonFormField<int>(
+                                      value: _lateGracePeriodMinutes,
+                                      decoration: const InputDecoration(
+                                        suffixText: 'min',
+                                        contentPadding: EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 8),
+                                      ),
+                                      items: [5, 10, 15, 20, 30]
+                                          .map((mins) => DropdownMenuItem(
+                                                value: mins,
+                                                child: Text('$mins'),
+                                              ))
+                                          .toList(),
+                                      onChanged: (val) => setState(() =>
+                                          _lateGracePeriodMinutes = val ?? 10),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text('Absent Grace Period',
+                                            style: GoogleFonts.poppins(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500)),
+                                        Text(
+                                            'After this period, students are marked absent',
+                                            style: GoogleFonts.albertSans(
+                                                fontSize: 12,
+                                                color: Colors.grey[600])),
+                                      ],
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 100,
+                                    child: DropdownButtonFormField<int>(
+                                      value: _absentGracePeriodMinutes,
+                                      decoration: const InputDecoration(
+                                        suffixText: 'min',
+                                        contentPadding: EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 8),
+                                      ),
+                                      items: [15, 20, 30, 45, 60]
+                                          .map((mins) => DropdownMenuItem(
+                                                value: mins,
+                                                child: Text('$mins'),
+                                              ))
+                                          .toList(),
+                                      onChanged: (val) => setState(() =>
+                                          _absentGracePeriodMinutes =
+                                              val ?? 30),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      Text('Color',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      BlockPicker(
+                          pickerColor: _color,
+                          availableColors: AppColors.classPalette,
+                          onColorChanged: (c) => setState(() => _color = c)),
+                      const SizedBox(height: 16),
+                      Text('Alerts',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w600)),
+                      SwitchListTile(
+                        value: _alertEnabled,
+                        onChanged: (v) => setState(() => _alertEnabled = v),
+                        title: const Text('Enable Class Reminders'),
+                        subtitle: Text(
+                          _alertEnabled
+                              ? 'You will be notified 15 minutes before class'
+                              : 'No reminders',
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        ),
+                        secondary: Icon(
+                          _alertEnabled
+                              ? Icons.notifications_active
+                              : Icons.notifications_off,
+                          color: _alertEnabled
+                              ? const Color(0xFF2196F3)
+                              : Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SwitchListTile(
+                          value: _syncToGoogle,
+                          onChanged: (v) => setState(() => _syncToGoogle = v),
+                          title: const Text('Add to Google Calendar')),
+                      CheckboxListTile(
+                          value: _includeAlerts,
+                          onChanged: (v) =>
+                              setState(() => _includeAlerts = v ?? true),
+                          title:
+                              const Text('Include alerts in Google Calendar')),
+                      const SizedBox(height: 24),
+                      _buildSaveButtons(
+                          context, classProvider, user, isFaculty),
                     ],
                   ),
                 ),
@@ -528,38 +822,70 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Row(children: [const Icon(Icons.share, color: Color(0xFF2196F3)), const SizedBox(width: 8), Text('Class Invite Code', style: GoogleFonts.poppins(fontSize: 18))]),
+        title: Row(children: [
+          const Icon(Icons.share, color: Color(0xFF2196F3)),
+          const SizedBox(width: 8),
+          Text('Class Invite Code', style: GoogleFonts.poppins(fontSize: 18))
+        ]),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Share this code with your students:', style: GoogleFonts.albertSans(color: Colors.grey[600])),
+            Text('Share this code with your students:',
+                style: GoogleFonts.albertSans(color: Colors.grey[600])),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: BoxDecoration(color: const Color(0xFF2196F3).withOpacity(0.1), borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFF2196F3))),
+              decoration: BoxDecoration(
+                  color: const Color(0xFF2196F3).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF2196F3))),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(_inviteCode ?? 'N/A', style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.w700, letterSpacing: 4, color: const Color(0xFF2196F3))),
+                  Text(_inviteCode ?? 'N/A',
+                      style: GoogleFonts.poppins(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 4,
+                          color: const Color(0xFF2196F3))),
                   const SizedBox(width: 12),
-                  IconButton(icon: const Icon(Icons.copy, color: Color(0xFF2196F3)), onPressed: () { Clipboard.setData(ClipboardData(text: _inviteCode ?? '')); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Code copied'))); }),
+                  IconButton(
+                      icon: const Icon(Icons.copy, color: Color(0xFF2196F3)),
+                      onPressed: () {
+                        Clipboard.setData(
+                            ClipboardData(text: _inviteCode ?? ''));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Code copied')));
+                      }),
                 ],
               ),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () { setState(() => _inviteCode = ClassModel.generateInviteCode()); Navigator.pop(context); _showInviteCodeDialog(); }, child: const Text('Regenerate')),
-          ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
+          TextButton(
+              onPressed: () {
+                setState(() => _inviteCode = ClassModel.generateInviteCode());
+                Navigator.pop(context);
+                _showInviteCodeDialog();
+              },
+              child: const Text('Regenerate')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Done')),
         ],
       ),
     );
   }
 
-  Widget _buildSaveButtons(BuildContext context, ClassProvider classProvider, UserModel? user, bool isFaculty) {
+  Widget _buildSaveButtons(BuildContext context, ClassProvider classProvider,
+      UserModel? user, bool isFaculty) {
     return Row(
       children: [
-        Expanded(child: OutlinedButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel'))),
+        Expanded(
+            child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'))),
         const SizedBox(width: 12),
         Expanded(
           child: ElevatedButton(

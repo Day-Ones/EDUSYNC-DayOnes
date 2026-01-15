@@ -10,6 +10,7 @@ import '../providers/schedule_provider.dart';
 import '../providers/location_provider.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/connectivity_banner.dart';
 import 'add_edit_class_screen.dart';
 import 'join_class_screen.dart';
 import 'class_details_screen.dart';
@@ -43,10 +44,11 @@ class _MainScreenState extends State<MainScreen> {
     final locationProvider = context.read<LocationProvider>();
     final user = auth.user;
     if (user != null) {
-      classProvider.loadForUser(user.id, isStudent: user.userType == UserType.student);
+      classProvider.loadForUser(user.id,
+          isStudent: user.userType == UserType.student);
       scheduleProvider.loadForUser(user.id);
       locationProvider.initialize(user.id, user.userType);
-      
+
       if (user.userType == UserType.faculty) {
         locationProvider.updateFacultyInfo(
           facultyId: user.id,
@@ -55,7 +57,7 @@ class _MainScreenState extends State<MainScreen> {
           email: user.email,
         );
       }
-      
+
       // Initialize notifications for class reminders
       if (!_notificationsInitialized) {
         _notificationsInitialized = true;
@@ -67,21 +69,27 @@ class _MainScreenState extends State<MainScreen> {
   void _initializeNotifications() {
     final classProvider = context.read<ClassProvider>();
     final notificationService = context.read<NotificationService>();
-    
+
     // Start monitoring classes for notifications
-    final allClasses = [...classProvider.classes, ...classProvider.enrolledClasses];
+    final allClasses = [
+      ...classProvider.classes,
+      ...classProvider.enrolledClasses
+    ];
     notificationService.startClassMonitoring(allClasses);
-    
+
     // Schedule alerts for each class
     for (final classModel in allClasses) {
       if (classModel.alerts.isNotEmpty) {
         notificationService.scheduleAlerts(classModel);
       }
     }
-    
+
     // Listen for class changes to update notifications
     classProvider.addListener(() {
-      final updatedClasses = [...classProvider.classes, ...classProvider.enrolledClasses];
+      final updatedClasses = [
+        ...classProvider.classes,
+        ...classProvider.enrolledClasses
+      ];
       notificationService.updateScheduledClasses(updatedClasses);
     });
   }
@@ -123,17 +131,25 @@ class _MainScreenState extends State<MainScreen> {
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
         // Minimize app (like pressing home button) instead of exiting
-        SystemChannels.platform.invokeMethod('SystemNavigator.pop', {'animated': true});
+        SystemChannels.platform
+            .invokeMethod('SystemNavigator.pop', {'animated': true});
       },
       child: Scaffold(
         backgroundColor: Colors.white,
-        body: PageView(
-          controller: _pageController,
-          onPageChanged: _onPageChanged,
+        body: Column(
           children: [
-            _HomePanel(user: user),
-            _ClassesPanel(user: user),
-            _ProfilePanel(user: user),
+            const ConnectivityBanner(),
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                onPageChanged: _onPageChanged,
+                children: [
+                  _HomePanel(user: user),
+                  _ClassesPanel(user: user),
+                  _ProfilePanel(user: user),
+                ],
+              ),
+            ),
           ],
         ),
         bottomNavigationBar: BottomNavigationBar(
@@ -153,7 +169,6 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-
 // ==================== HOME PANEL ====================
 class _HomePanel extends StatelessWidget {
   final UserModel user;
@@ -166,7 +181,9 @@ class _HomePanel extends StatelessWidget {
     final classes = classProvider.classes;
     final enrolledClasses = classProvider.enrolledClasses;
     final allClasses = [...classes, ...enrolledClasses];
-    final todayClasses = allClasses.where((c) => c.daysOfWeek.contains(DateTime.now().weekday)).toList();
+    final todayClasses = allClasses
+        .where((c) => c.daysOfWeek.contains(DateTime.now().weekday))
+        .toList();
     final upcomingClasses = _getUpcomingClasses(todayClasses);
     final todaySchedules = scheduleProvider.getTodaySchedules();
     final upcomingSchedules = scheduleProvider.getUpcomingSchedules();
@@ -183,31 +200,49 @@ class _HomePanel extends StatelessWidget {
             children: [
               Text(
                 'Welcome back,',
-                style: GoogleFonts.albertSans(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w400),
+                style: GoogleFonts.albertSans(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w400),
               ),
               const SizedBox(height: 4),
               Text(
                 user.fullName.isNotEmpty ? user.fullName : 'User',
-                style: GoogleFonts.poppins(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w700),
+                style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 36,
+                    fontWeight: FontWeight.w700),
               ),
             ],
           ),
         ),
-        
+
         // Stats Cards
         Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              Expanded(child: _buildStatCard(Icons.class_, const Color(0xFF64B5F6), allClasses.length.toString(), 'Classes')),
+              Expanded(
+                  child: _buildStatCard(Icons.class_, const Color(0xFF64B5F6),
+                      allClasses.length.toString(), 'Classes')),
               const SizedBox(width: 12),
-              Expanded(child: _buildStatCard(Icons.event_note, const Color(0xFF81C784), todaySchedules.length.toString(), 'Events')),
+              Expanded(
+                  child: _buildStatCard(
+                      Icons.event_note,
+                      const Color(0xFF81C784),
+                      todaySchedules.length.toString(),
+                      'Events')),
               const SizedBox(width: 12),
-              Expanded(child: _buildStatCard(Icons.access_time, const Color(0xFFE57373), (upcomingClasses + upcomingSchedules.length).toString(), 'Upcoming')),
+              Expanded(
+                  child: _buildStatCard(
+                      Icons.access_time,
+                      const Color(0xFFE57373),
+                      (upcomingClasses + upcomingSchedules.length).toString(),
+                      'Upcoming')),
             ],
           ),
         ),
-        
+
         // Today's Classes Section
         Expanded(
           child: Column(
@@ -218,14 +253,19 @@ class _HomePanel extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text("Today's Classes", style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w700)),
+                    Text("Today's Classes",
+                        style: GoogleFonts.poppins(
+                            fontSize: 22, fontWeight: FontWeight.w700)),
                     TextButton(
                       onPressed: () {
                         // Navigate to classes panel
-                        final mainState = context.findAncestorStateOfType<_MainScreenState>();
+                        final mainState =
+                            context.findAncestorStateOfType<_MainScreenState>();
                         mainState?._onNavTap(1);
                       },
-                      child: Text('See All', style: GoogleFonts.albertSans(color: const Color(0xFF2196F3), fontSize: 16)),
+                      child: Text('See All',
+                          style: GoogleFonts.albertSans(
+                              color: const Color(0xFF2196F3), fontSize: 16)),
                     ),
                   ],
                 ),
@@ -233,13 +273,16 @@ class _HomePanel extends StatelessWidget {
               Expanded(
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(color: const Color(0xFFE0E0E0), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFFE0E0E0),
+                      borderRadius: BorderRadius.circular(8)),
                   child: todayClasses.isEmpty
                       ? _buildEmptyClassesState(context)
                       : ListView.builder(
                           padding: const EdgeInsets.all(8),
                           itemCount: todayClasses.length,
-                          itemBuilder: (context, index) => _buildClassTile(context, todayClasses[index], enrolledClasses),
+                          itemBuilder: (context, index) => _buildClassTile(
+                              context, todayClasses[index], enrolledClasses),
                         ),
                 ),
               ),
@@ -258,11 +301,13 @@ class _HomePanel extends StatelessWidget {
         children: [
           Icon(Icons.event_busy, size: 48, color: Colors.grey[400]),
           const SizedBox(height: 8),
-          Text('No classes today', style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+          Text('No classes today',
+              style: TextStyle(color: Colors.grey[600], fontSize: 16)),
           const SizedBox(height: 8),
           TextButton(
             onPressed: () {
-              final mainState = context.findAncestorStateOfType<_MainScreenState>();
+              final mainState =
+                  context.findAncestorStateOfType<_MainScreenState>();
               mainState?._onNavTap(1);
             },
             child: const Text('View all classes'),
@@ -272,49 +317,71 @@ class _HomePanel extends StatelessWidget {
     );
   }
 
-  Widget _buildClassTile(BuildContext context, ClassModel classItem, List<ClassModel> enrolledClasses) {
+  Widget _buildClassTile(BuildContext context, ClassModel classItem,
+      List<ClassModel> enrolledClasses) {
     final isEnrolled = enrolledClasses.any((c) => c.id == classItem.id);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        onTap: () => Navigator.pushNamed(context, ClassDetailsScreen.routeName, arguments: classItem),
+        onTap: () => Navigator.pushNamed(context, ClassDetailsScreen.routeName,
+            arguments: classItem),
         leading: CircleAvatar(
           backgroundColor: classItem.color,
           child: const Icon(Icons.book, color: Colors.white, size: 20),
         ),
-        title: Text(classItem.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('${_formatTime(classItem.startTime)} - ${_formatTime(classItem.endTime)}'),
+        title: Text(classItem.name,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(
+            '${_formatTime(classItem.startTime)} - ${_formatTime(classItem.endTime)}'),
         trailing: isEnrolled
             ? Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
-                child: Text('Enrolled', style: GoogleFonts.albertSans(fontSize: 10, color: Colors.green, fontWeight: FontWeight.w600)),
+                decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4)),
+                child: Text('Enrolled',
+                    style: GoogleFonts.albertSans(
+                        fontSize: 10,
+                        color: Colors.green,
+                        fontWeight: FontWeight.w600)),
               )
             : classItem.campusLocation != null
-                ? Text(classItem.campusLocation!.room ?? '', style: TextStyle(fontSize: 11, color: Colors.grey[600]))
+                ? Text(classItem.campusLocation!.room ?? '',
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600]))
                 : null,
       ),
     );
   }
 
-  Widget _buildStatCard(IconData icon, Color iconColor, String value, String label) {
+  Widget _buildStatCard(
+      IconData icon, Color iconColor, String value, String label) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2))
+        ],
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: iconColor.withValues(alpha: 0.2), shape: BoxShape.circle),
+            decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.2),
+                shape: BoxShape.circle),
             child: Icon(icon, color: iconColor, size: 24),
           ),
           const SizedBox(height: 8),
-          Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          Text(label, style: GoogleFonts.albertSans(fontSize: 13, color: Colors.grey)),
+          Text(value,
+              style:
+                  const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          Text(label,
+              style: GoogleFonts.albertSans(fontSize: 13, color: Colors.grey)),
         ],
       ),
     );
@@ -322,7 +389,11 @@ class _HomePanel extends StatelessWidget {
 
   int _getUpcomingClasses(List<ClassModel> todays) {
     final now = TimeOfDay.now();
-    return todays.where((c) => (c.startTime.hour * 60 + c.startTime.minute) > (now.hour * 60 + now.minute)).length;
+    return todays
+        .where((c) =>
+            (c.startTime.hour * 60 + c.startTime.minute) >
+            (now.hour * 60 + now.minute))
+        .length;
   }
 
   String _formatTime(TimeOfDay t) {
@@ -332,7 +403,6 @@ class _HomePanel extends StatelessWidget {
     return '$hour:$minute $period';
   }
 }
-
 
 // ==================== CLASSES PANEL ====================
 class _ClassesPanel extends StatelessWidget {
@@ -359,10 +429,13 @@ class _ClassesPanel extends StatelessWidget {
               decoration: const BoxDecoration(color: Color(0xFF2196F3)),
               child: Text(
                 'My Classes',
-                style: GoogleFonts.poppins(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w600),
+                style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w600),
               ),
             ),
-            
+
             // Classes List
             Expanded(
               child: classProvider.isLoading
@@ -374,8 +447,10 @@ class _ClassesPanel extends StatelessWidget {
                           itemCount: allClasses.length,
                           itemBuilder: (context, index) {
                             final classItem = allClasses[index];
-                            final isEnrolled = enrolledClasses.any((c) => c.id == classItem.id);
-                            return _buildClassCard(context, classItem, isEnrolled, isStudent);
+                            final isEnrolled = enrolledClasses
+                                .any((c) => c.id == classItem.id);
+                            return _buildClassCard(
+                                context, classItem, isEnrolled, isStudent);
                           },
                         ),
             ),
@@ -389,7 +464,9 @@ class _ClassesPanel extends StatelessWidget {
             child: FloatingActionButton(
               onPressed: () => Navigator.pushNamed(
                 context,
-                isStudent ? JoinClassScreen.routeName : AddEditClassScreen.routeName,
+                isStudent
+                    ? JoinClassScreen.routeName
+                    : AddEditClassScreen.routeName,
               ),
               backgroundColor: const Color(0xFF2196F3),
               child: const Icon(Icons.add, color: Colors.white),
@@ -414,13 +491,16 @@ class _ClassesPanel extends StatelessWidget {
           ElevatedButton(
             onPressed: () => Navigator.pushNamed(
               context,
-              isStudent ? JoinClassScreen.routeName : AddEditClassScreen.routeName,
+              isStudent
+                  ? JoinClassScreen.routeName
+                  : AddEditClassScreen.routeName,
             ),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2196F3),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
             ),
             child: Text(
               isStudent ? 'Join Now' : 'Create Now',
@@ -432,13 +512,15 @@ class _ClassesPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildClassCard(BuildContext context, ClassModel classItem, bool isEnrolled, bool isStudent) {
+  Widget _buildClassCard(BuildContext context, ClassModel classItem,
+      bool isEnrolled, bool isStudent) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: () => Navigator.pushNamed(context, ClassDetailsScreen.routeName, arguments: classItem),
+        onTap: () => Navigator.pushNamed(context, ClassDetailsScreen.routeName,
+            arguments: classItem),
         borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.all(16),
@@ -463,19 +545,24 @@ class _ClassesPanel extends StatelessWidget {
                         Expanded(
                           child: Text(
                             classItem.name,
-                            style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
+                            style: GoogleFonts.poppins(
+                                fontSize: 16, fontWeight: FontWeight.w600),
                           ),
                         ),
                         if (isEnrolled)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.green.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               'Enrolled',
-                              style: GoogleFonts.albertSans(fontSize: 10, color: Colors.green, fontWeight: FontWeight.w600),
+                              style: GoogleFonts.albertSans(
+                                  fontSize: 10,
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w600),
                             ),
                           ),
                       ],
@@ -487,18 +574,21 @@ class _ClassesPanel extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           '${_formatTime(classItem.startTime)} - ${_formatTime(classItem.endTime)}',
-                          style: GoogleFonts.albertSans(fontSize: 13, color: Colors.grey[600]),
+                          style: GoogleFonts.albertSans(
+                              fontSize: 13, color: Colors.grey[600]),
                         ),
                       ],
                     ),
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        Icon(Icons.calendar_today, size: 14, color: Colors.grey[600]),
+                        Icon(Icons.calendar_today,
+                            size: 14, color: Colors.grey[600]),
                         const SizedBox(width: 4),
                         Text(
                           _formatDays(classItem.daysOfWeek),
-                          style: GoogleFonts.albertSans(fontSize: 12, color: Colors.grey[500]),
+                          style: GoogleFonts.albertSans(
+                              fontSize: 12, color: Colors.grey[500]),
                         ),
                       ],
                     ),
@@ -510,7 +600,8 @@ class _ClassesPanel extends StatelessWidget {
                           const SizedBox(width: 4),
                           Text(
                             classItem.facultyName!,
-                            style: GoogleFonts.albertSans(fontSize: 12, color: Colors.grey[500]),
+                            style: GoogleFonts.albertSans(
+                                fontSize: 12, color: Colors.grey[500]),
                           ),
                         ],
                       ),
@@ -524,8 +615,10 @@ class _ClassesPanel extends StatelessWidget {
                   children: [
                     Icon(Icons.location_on, size: 16, color: Colors.grey[400]),
                     Text(
-                      classItem.campusLocation!.room ?? classItem.campusLocation!.name,
-                      style: GoogleFonts.albertSans(fontSize: 11, color: Colors.grey[500]),
+                      classItem.campusLocation!.room ??
+                          classItem.campusLocation!.name,
+                      style: GoogleFonts.albertSans(
+                          fontSize: 11, color: Colors.grey[500]),
                     ),
                   ],
                 ),
@@ -548,7 +641,6 @@ class _ClassesPanel extends StatelessWidget {
     return days.map((d) => dayNames[d]).join(', ');
   }
 }
-
 
 // ==================== PROFILE PANEL ====================
 class _ProfilePanel extends StatefulWidget {
@@ -578,7 +670,9 @@ class _ProfilePanelState extends State<_ProfilePanel> {
     });
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Calendar synced successfully!'), duration: Duration(seconds: 2)),
+      const SnackBar(
+          content: Text('Calendar synced successfully!'),
+          duration: Duration(seconds: 2)),
     );
   }
 
@@ -606,10 +700,11 @@ class _ProfilePanelState extends State<_ProfilePanel> {
           decoration: const BoxDecoration(color: Color(0xFF2196F3)),
           child: Text(
             'Profile & Settings',
-            style: GoogleFonts.poppins(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w600),
+            style: GoogleFonts.poppins(
+                color: Colors.white, fontSize: 28, fontWeight: FontWeight.w600),
           ),
         ),
-        
+
         // Profile Content
         Expanded(
           child: ListView(
@@ -617,17 +712,24 @@ class _ProfilePanelState extends State<_ProfilePanel> {
             children: [
               // User Card
               Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
                       CircleAvatar(
                         radius: 32,
-                        backgroundColor: const Color(0xFF257FCE).withValues(alpha: 0.2),
+                        backgroundColor:
+                            const Color(0xFF257FCE).withValues(alpha: 0.2),
                         child: Text(
-                          user.fullName.isNotEmpty ? user.fullName.characters.first.toUpperCase() : '?',
-                          style: const TextStyle(color: Color(0xFF257FCE), fontWeight: FontWeight.w800, fontSize: 24),
+                          user.fullName.isNotEmpty
+                              ? user.fullName.characters.first.toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                              color: Color(0xFF257FCE),
+                              fontWeight: FontWeight.w800,
+                              fontSize: 24),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -635,17 +737,28 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(user.fullName, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                            Text(user.fullName,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w800)),
                             const SizedBox(height: 4),
-                            Text(user.email, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                            Text(user.email,
+                                style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary)),
                             const SizedBox(height: 8),
                             Chip(
                               label: Text(
                                 user.userType.name.toUpperCase(),
-                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 11, color: Colors.white),
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 11,
+                                    color: Colors.white),
                               ),
                               backgroundColor: const Color(0xFF257FCE),
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
                             ),
                           ],
                         ),
@@ -655,28 +768,41 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               // Account Information
-              Text('Account Information', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textSecondary)),
+              Text('Account Information',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: AppColors.textSecondary)),
               const SizedBox(height: 8),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Department/Major'),
-                subtitle: Text(user.department ?? 'Not set', style: const TextStyle(color: AppColors.textSecondary)),
+                subtitle: Text(user.department ?? 'Not set',
+                    style: const TextStyle(color: AppColors.textSecondary)),
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('ID'),
-                subtitle: Text(user.studentId ?? user.facultyId ?? 'Not set', style: const TextStyle(color: AppColors.textSecondary)),
+                subtitle: Text(user.studentId ?? user.facultyId ?? 'Not set',
+                    style: const TextStyle(color: AppColors.textSecondary)),
               ),
               const Divider(height: 24),
-              
+
               // Google Calendar Integration
-              Text('Google Calendar Integration', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textSecondary)),
+              Text('Google Calendar Integration',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: AppColors.textSecondary)),
               const SizedBox(height: 8),
               Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                color: user.isGoogleCalendarConnected ? const Color(0xFF4CAF50).withValues(alpha: 0.08) : Colors.grey.withValues(alpha: 0.05),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                color: user.isGoogleCalendarConnected
+                    ? const Color(0xFF4CAF50).withValues(alpha: 0.08)
+                    : Colors.grey.withValues(alpha: 0.05),
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Column(
@@ -687,12 +813,17 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: user.isGoogleCalendarConnected ? const Color(0xFF4CAF50).withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.2),
+                              color: user.isGoogleCalendarConnected
+                                  ? const Color(0xFF4CAF50)
+                                      .withValues(alpha: 0.2)
+                                  : Colors.grey.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Icon(
                               Icons.cloud_sync,
-                              color: user.isGoogleCalendarConnected ? const Color(0xFF4CAF50) : Colors.grey,
+                              color: user.isGoogleCalendarConnected
+                                  ? const Color(0xFF4CAF50)
+                                  : Colors.grey,
                               size: 24,
                             ),
                           ),
@@ -701,12 +832,21 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Calendar Status', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+                                Text('Calendar Status',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(
+                                            fontWeight: FontWeight.w700)),
                                 Text(
-                                  user.isGoogleCalendarConnected ? 'Connected' : 'Not connected',
+                                  user.isGoogleCalendarConnected
+                                      ? 'Connected'
+                                      : 'Not connected',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: user.isGoogleCalendarConnected ? const Color(0xFF4CAF50) : Colors.grey,
+                                    color: user.isGoogleCalendarConnected
+                                        ? const Color(0xFF4CAF50)
+                                        : Colors.grey,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -723,19 +863,28 @@ class _ProfilePanelState extends State<_ProfilePanel> {
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Google Account'),
-                subtitle: Text(user.googleAccountEmail ?? 'Not connected', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                subtitle: Text(user.googleAccountEmail ?? 'Not connected',
+                    style: const TextStyle(
+                        color: AppColors.textSecondary, fontSize: 12)),
               ),
               const Divider(height: 24),
-              
+
               // Location Sharing (Faculty only)
               if (user.userType == UserType.faculty) ...[
-                Text('Location Sharing', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textSecondary)),
+                Text('Location Sharing',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: AppColors.textSecondary)),
                 const SizedBox(height: 8),
                 Consumer<LocationProvider>(
                   builder: (context, locationProvider, _) {
                     return Card(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      color: locationProvider.isSharing ? const Color(0xFF4CAF50).withValues(alpha: 0.08) : Colors.grey.withValues(alpha: 0.05),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      color: locationProvider.isSharing
+                          ? const Color(0xFF4CAF50).withValues(alpha: 0.08)
+                          : Colors.grey.withValues(alpha: 0.05),
                       child: Padding(
                         padding: const EdgeInsets.all(12),
                         child: Column(
@@ -746,26 +895,43 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                                 Container(
                                   padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
-                                    color: locationProvider.isSharing ? const Color(0xFF4CAF50).withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.2),
+                                    color: locationProvider.isSharing
+                                        ? const Color(0xFF4CAF50)
+                                            .withValues(alpha: 0.2)
+                                        : Colors.grey.withValues(alpha: 0.2),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Icon(
-                                    locationProvider.isSharing ? Icons.location_on : Icons.location_off,
-                                    color: locationProvider.isSharing ? const Color(0xFF4CAF50) : Colors.grey,
+                                    locationProvider.isSharing
+                                        ? Icons.location_on
+                                        : Icons.location_off,
+                                    color: locationProvider.isSharing
+                                        ? const Color(0xFF4CAF50)
+                                        : Colors.grey,
                                     size: 24,
                                   ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text('Share Location with Students', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700)),
+                                      Text('Share Location with Students',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                  fontWeight: FontWeight.w700)),
                                       Text(
-                                        locationProvider.isSharing ? 'Students can see your ETA' : 'Location sharing is off',
+                                        locationProvider.isSharing
+                                            ? 'Students can see your ETA'
+                                            : 'Location sharing is off',
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: locationProvider.isSharing ? const Color(0xFF4CAF50) : Colors.grey,
+                                          color: locationProvider.isSharing
+                                              ? const Color(0xFF4CAF50)
+                                              : Colors.grey,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -774,25 +940,35 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                                 ),
                                 Switch(
                                   value: locationProvider.isSharing,
-                                  onChanged: locationProvider.isLoading ? null : (value) async {
-                                    await locationProvider.toggleSharing();
-                                    if (locationProvider.error != null && context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text(locationProvider.error!)),
-                                      );
-                                      locationProvider.clearError();
-                                    }
-                                  },
-                                  activeTrackColor: const Color(0xFF4CAF50).withValues(alpha: 0.5),
+                                  onChanged: locationProvider.isLoading
+                                      ? null
+                                      : (value) async {
+                                          await locationProvider
+                                              .toggleSharing();
+                                          if (locationProvider.error != null &&
+                                              context.mounted) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                  content: Text(
+                                                      locationProvider.error!)),
+                                            );
+                                            locationProvider.clearError();
+                                          }
+                                        },
+                                  activeTrackColor: const Color(0xFF4CAF50)
+                                      .withValues(alpha: 0.5),
                                   activeThumbColor: const Color(0xFF4CAF50),
                                 ),
                               ],
                             ),
-                            if (locationProvider.isSharing && locationProvider.currentPosition != null) ...[
+                            if (locationProvider.isSharing &&
+                                locationProvider.currentPosition != null) ...[
                               const SizedBox(height: 8),
                               Text(
                                 'Your location is being shared in real-time',
-                                style: GoogleFonts.albertSans(fontSize: 11, color: Colors.grey[600]),
+                                style: GoogleFonts.albertSans(
+                                    fontSize: 11, color: Colors.grey[600]),
                               ),
                             ],
                           ],
@@ -803,44 +979,60 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                 ),
                 const Divider(height: 24),
               ],
-              
+
               // App Information
-              Text('App Information', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textSecondary)),
+              Text('App Information',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: AppColors.textSecondary)),
               const SizedBox(height: 8),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('App Version'),
-                subtitle: const Text('0.1.0', style: TextStyle(color: AppColors.textSecondary)),
+                subtitle: const Text('0.1.0',
+                    style: TextStyle(color: AppColors.textSecondary)),
               ),
               const Divider(height: 24),
-              
+
               // Data Management
-              Text('Data Management', style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 13, color: AppColors.textSecondary)),
+              Text('Data Management',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: AppColors.textSecondary)),
               const SizedBox(height: 8),
               OutlinedButton.icon(
                 icon: const Icon(Icons.delete_outline, color: AppColors.error),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.error,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
                 onPressed: () async {
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (_) => AlertDialog(
                       title: const Text('Clear Local Data?'),
-                      content: const Text('This will delete all locally saved data.'),
+                      content: const Text(
+                          'This will delete all locally saved data.'),
                       actions: [
-                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                        TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel')),
                         TextButton(
                           onPressed: () => Navigator.pop(context, true),
-                          child: const Text('Clear', style: TextStyle(color: AppColors.error)),
+                          child: const Text('Clear',
+                              style: TextStyle(color: AppColors.error)),
                         ),
                       ],
                     ),
                   );
                   if (confirm == true && mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Local data cleared'), duration: Duration(seconds: 2)),
+                      const SnackBar(
+                          content: Text('Local data cleared'),
+                          duration: Duration(seconds: 2)),
                     );
                   }
                 },
@@ -849,7 +1041,10 @@ class _ProfilePanelState extends State<_ProfilePanel> {
               const SizedBox(height: 16),
               OutlinedButton.icon(
                 icon: const Icon(Icons.logout, color: AppColors.error),
-                style: OutlinedButton.styleFrom(foregroundColor: AppColors.error, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.error,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8))),
                 onPressed: () async {
                   final confirm = await showDialog<bool>(
                     context: context,
@@ -857,8 +1052,12 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                       title: const Text('Logout'),
                       content: const Text('Are you sure you want to logout?'),
                       actions: [
-                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                        TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Logout')),
+                        TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel')),
+                        TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Logout')),
                       ],
                     ),
                   );
@@ -868,7 +1067,8 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                     }
                     await auth.logout();
                     if (!context.mounted) return;
-                    Navigator.pushNamedAndRemoveUntil(context, LoginRoleSelectionScreen.routeName, (_) => false);
+                    Navigator.pushNamedAndRemoveUntil(context,
+                        LoginRoleSelectionScreen.routeName, (_) => false);
                   }
                 },
                 label: const Text('Logout'),
