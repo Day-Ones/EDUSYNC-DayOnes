@@ -102,9 +102,22 @@ class _SignupScreenState extends State<SignupScreen> {
         automaticallyImplyLeading: false,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.2),
+              ),
+              child: const Icon(
+                Icons.chevron_left,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+          ),
         ),
       ),
       body: SafeArea(

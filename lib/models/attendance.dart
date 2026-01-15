@@ -1,3 +1,10 @@
+/// Attendance status enum
+enum AttendanceStatus {
+  present,
+  late,
+  absent,
+}
+
 /// Represents a single attendance record for a student in a class
 class AttendanceRecord {
   AttendanceRecord({
@@ -7,6 +14,7 @@ class AttendanceRecord {
     required this.studentName,
     required this.date,
     required this.checkedInAt,
+    this.status = AttendanceStatus.present,
   });
 
   final String id;
@@ -15,15 +23,17 @@ class AttendanceRecord {
   final String studentName;
   final DateTime date;
   final DateTime checkedInAt;
+  final AttendanceStatus status;
 
   Map<String, dynamic> toMap() => {
-    'id': id,
-    'classId': classId,
-    'studentId': studentId,
-    'studentName': studentName,
-    'date': date.toIso8601String(),
-    'checkedInAt': checkedInAt.toIso8601String(),
-  };
+        'id': id,
+        'classId': classId,
+        'studentId': studentId,
+        'studentName': studentName,
+        'date': date.toIso8601String(),
+        'checkedInAt': checkedInAt.toIso8601String(),
+        'status': status.name,
+      };
 
   factory AttendanceRecord.fromMap(Map<String, dynamic> map) {
     return AttendanceRecord(
@@ -33,6 +43,10 @@ class AttendanceRecord {
       studentName: map['studentName'] as String? ?? 'Unknown',
       date: DateTime.parse(map['date'] as String),
       checkedInAt: DateTime.parse(map['checkedInAt'] as String),
+      status: AttendanceStatus.values.firstWhere(
+        (e) => e.name == (map['status'] as String?),
+        orElse: () => AttendanceStatus.present,
+      ),
     );
   }
 }
@@ -47,6 +61,8 @@ class EnrolledStudent {
     this.totalClasses = 0,
     this.attendedClasses = 0,
     this.isCheckedInToday = false,
+    this.todayStatus,
+    this.checkedInTime,
   });
 
   final String id;
@@ -56,14 +72,18 @@ class EnrolledStudent {
   final int totalClasses;
   final int attendedClasses;
   final bool isCheckedInToday;
+  final AttendanceStatus? todayStatus;
+  final DateTime? checkedInTime;
 
-  double get attendancePercentage => 
+  double get attendancePercentage =>
       totalClasses > 0 ? (attendedClasses / totalClasses) * 100 : 0;
 
   EnrolledStudent copyWith({
     int? totalClasses,
     int? attendedClasses,
     bool? isCheckedInToday,
+    AttendanceStatus? todayStatus,
+    DateTime? checkedInTime,
   }) {
     return EnrolledStudent(
       id: id,
@@ -73,18 +93,20 @@ class EnrolledStudent {
       totalClasses: totalClasses ?? this.totalClasses,
       attendedClasses: attendedClasses ?? this.attendedClasses,
       isCheckedInToday: isCheckedInToday ?? this.isCheckedInToday,
+      todayStatus: todayStatus ?? this.todayStatus,
+      checkedInTime: checkedInTime ?? this.checkedInTime,
     );
   }
 
   Map<String, dynamic> toMap() => {
-    'id': id,
-    'name': name,
-    'email': email,
-    'studentId': studentId,
-    'totalClasses': totalClasses,
-    'attendedClasses': attendedClasses,
-    'isCheckedInToday': isCheckedInToday,
-  };
+        'id': id,
+        'name': name,
+        'email': email,
+        'studentId': studentId,
+        'totalClasses': totalClasses,
+        'attendedClasses': attendedClasses,
+        'isCheckedInToday': isCheckedInToday,
+      };
 
   factory EnrolledStudent.fromMap(Map<String, dynamic> map) {
     return EnrolledStudent(

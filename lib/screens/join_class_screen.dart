@@ -27,7 +27,7 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
 
   Future<void> _joinClass() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -46,7 +46,8 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
     }
 
     final code = _codeController.text.trim().toUpperCase();
-    final error = await classProvider.joinClassWithCode(code, user.id);
+    final error =
+        await classProvider.joinClassWithCode(code, user.id, user.fullName);
 
     if (!mounted) return;
 
@@ -170,7 +171,7 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
                   return null;
                 },
               ),
-              
+
               if (_errorMessage != null) ...[
                 const SizedBox(height: 16),
                 Container(
@@ -182,7 +183,8 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                      const Icon(Icons.error_outline,
+                          color: Colors.red, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -197,7 +199,7 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
                   ),
                 ),
               ],
-              
+
               const SizedBox(height: 32),
 
               // Join button
@@ -217,7 +219,8 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
                         width: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       )
                     : Text(
@@ -228,9 +231,9 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
                         ),
                       ),
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               // Help text
               Container(
                 padding: const EdgeInsets.all(16),
@@ -243,7 +246,8 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.help_outline, size: 20, color: Colors.grey[600]),
+                        Icon(Icons.help_outline,
+                            size: 20, color: Colors.grey[600]),
                         const SizedBox(width: 8),
                         Text(
                           'How to get an invite code?',

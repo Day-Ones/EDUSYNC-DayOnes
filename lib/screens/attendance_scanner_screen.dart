@@ -2,15 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
+import '../models/class.dart';
 import '../providers/attendance_provider.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/connectivity_banner.dart';
 
 class AttendanceScannerScreen extends StatefulWidget {
-  const AttendanceScannerScreen({super.key});
+  final ClassModel classModel;
+
+  const AttendanceScannerScreen({super.key, required this.classModel});
   static const routeName = '/attendance-scanner';
 
   @override
-  State<AttendanceScannerScreen> createState() => _AttendanceScannerScreenState();
+  State<AttendanceScannerScreen> createState() =>
+      _AttendanceScannerScreenState();
 }
 
 class _AttendanceScannerScreenState extends State<AttendanceScannerScreen> {
@@ -35,7 +40,7 @@ class _AttendanceScannerScreenState extends State<AttendanceScannerScreen> {
 
   Future<void> _onDetect(BarcodeCapture capture) async {
     if (_isProcessing || _hasScanned) return;
-    
+
     final barcode = capture.barcodes.firstOrNull;
     if (barcode?.rawValue == null) return;
 
@@ -57,6 +62,7 @@ class _AttendanceScannerScreenState extends State<AttendanceScannerScreen> {
       barcode!.rawValue!,
       user.id,
       user.fullName,
+      widget.classModel,
     );
 
     if (mounted) {
@@ -80,7 +86,8 @@ class _AttendanceScannerScreenState extends State<AttendanceScannerScreen> {
             const SizedBox(height: 16),
             Text(
               success ? 'Success!' : 'Error',
-              style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w600),
+              style: GoogleFonts.poppins(
+                  fontSize: 20, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
@@ -99,7 +106,8 @@ class _AttendanceScannerScreenState extends State<AttendanceScannerScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: success ? Colors.green : const Color(0xFF2196F3),
             ),
-            child: Text(success ? 'Done' : 'Try Again', style: const TextStyle(color: Colors.white)),
+            child: Text(success ? 'Done' : 'Try Again',
+                style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -117,72 +125,102 @@ class _AttendanceScannerScreenState extends State<AttendanceScannerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Check-in Attendance', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
         backgroundColor: const Color(0xFF2196F3),
-        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white24,
+              ),
+              child: const Icon(
+                Icons.chevron_left,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
+          ),
+        ),
       ),
-      body: Stack(
+      body: Column(
         children: [
-          MobileScanner(
-            controller: _controller,
-            onDetect: _onDetect,
-          ),
-          // Overlay
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.5),
-            ),
-            child: Center(
-              child: Container(
-                width: 280,
-                height: 280,
-                decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFF2196F3), width: 3),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-            ),
-          ),
-          // Cutout for scanner area
-          Center(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                width: 280,
-                height: 280,
-                color: Colors.transparent,
-              ),
-            ),
-          ),
-          // Instructions
-          Positioned(
-            bottom: 100,
-            left: 0,
-            right: 0,
-            child: Column(
+          const ConnectivityBanner(),
+          Expanded(
+            child: Stack(
               children: [
+                MobileScanner(
+                  controller: _controller,
+                  onDetect: _onDetect,
+                ),
+                // Overlay
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(24),
+                    color: Colors.black.withOpacity(0.5),
                   ),
-                  child: Text(
-                    'Point camera at QR code',
-                    style: GoogleFonts.albertSans(color: Colors.white, fontSize: 16),
+                  child: Center(
+                    child: Container(
+                      width: 280,
+                      height: 280,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                            color: const Color(0xFF2196F3), width: 3),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                if (_isProcessing)
-                  const CircularProgressIndicator(color: Colors.white),
+                // Cutout for scanner area
+                Center(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      width: 280,
+                      height: 280,
+                      color: Colors.transparent,
+                    ),
+                  ),
+                ),
+                // Instructions
+                Positioned(
+                  bottom: 100,
+                  left: 0,
+                  right: 0,
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.7),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Text(
+                          'Point camera at QR code',
+                          style: GoogleFonts.albertSans(
+                              color: Colors.white, fontSize: 16),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      if (_isProcessing)
+                        const CircularProgressIndicator(color: Colors.white),
+                    ],
+                  ),
+                ),
+                // Corner decorations
+                _buildCornerDecoration(
+                    top: 0, left: 0, alignment: Alignment.topLeft),
+                _buildCornerDecoration(
+                    top: 0, right: 0, alignment: Alignment.topRight),
+                _buildCornerDecoration(
+                    bottom: 0, left: 0, alignment: Alignment.bottomLeft),
+                _buildCornerDecoration(
+                    bottom: 0, right: 0, alignment: Alignment.bottomRight),
               ],
             ),
           ),
-          // Corner decorations
-          _buildCornerDecoration(top: 0, left: 0, alignment: Alignment.topLeft),
-          _buildCornerDecoration(top: 0, right: 0, alignment: Alignment.topRight),
-          _buildCornerDecoration(bottom: 0, left: 0, alignment: Alignment.bottomLeft),
-          _buildCornerDecoration(bottom: 0, right: 0, alignment: Alignment.bottomRight),
         ],
       ),
     );
@@ -196,25 +234,37 @@ class _AttendanceScannerScreenState extends State<AttendanceScannerScreen> {
     required Alignment alignment,
   }) {
     return Positioned(
-      top: top != null ? MediaQuery.of(context).size.height / 2 - 140 + top : null,
-      bottom: bottom != null ? MediaQuery.of(context).size.height / 2 - 140 + bottom : null,
-      left: left != null ? MediaQuery.of(context).size.width / 2 - 140 + left : null,
-      right: right != null ? MediaQuery.of(context).size.width / 2 - 140 + right : null,
+      top: top != null
+          ? MediaQuery.of(context).size.height / 2 - 140 + top
+          : null,
+      bottom: bottom != null
+          ? MediaQuery.of(context).size.height / 2 - 140 + bottom
+          : null,
+      left: left != null
+          ? MediaQuery.of(context).size.width / 2 - 140 + left
+          : null,
+      right: right != null
+          ? MediaQuery.of(context).size.width / 2 - 140 + right
+          : null,
       child: Container(
         width: 30,
         height: 30,
         decoration: BoxDecoration(
           border: Border(
-            top: alignment == Alignment.topLeft || alignment == Alignment.topRight
+            top: alignment == Alignment.topLeft ||
+                    alignment == Alignment.topRight
                 ? const BorderSide(color: Color(0xFF2196F3), width: 4)
                 : BorderSide.none,
-            bottom: alignment == Alignment.bottomLeft || alignment == Alignment.bottomRight
+            bottom: alignment == Alignment.bottomLeft ||
+                    alignment == Alignment.bottomRight
                 ? const BorderSide(color: Color(0xFF2196F3), width: 4)
                 : BorderSide.none,
-            left: alignment == Alignment.topLeft || alignment == Alignment.bottomLeft
+            left: alignment == Alignment.topLeft ||
+                    alignment == Alignment.bottomLeft
                 ? const BorderSide(color: Color(0xFF2196F3), width: 4)
                 : BorderSide.none,
-            right: alignment == Alignment.topRight || alignment == Alignment.bottomRight
+            right: alignment == Alignment.topRight ||
+                    alignment == Alignment.bottomRight
                 ? const BorderSide(color: Color(0xFF2196F3), width: 4)
                 : BorderSide.none,
           ),

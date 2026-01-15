@@ -48,13 +48,15 @@ class LocalDbService {
   }
 
   // Remove student from class
-  Future<void> unenrollStudentFromClass(String classId, String studentId) async {
+  Future<void> unenrollStudentFromClass(
+      String classId, String studentId) async {
     final prefs = await SharedPreferences.getInstance();
     final classes = await _loadAll();
     final idx = classes.indexWhere((c) => c.id == classId);
     if (idx >= 0) {
       final classModel = classes[idx];
-      final updatedStudents = classModel.enrolledStudentIds.where((id) => id != studentId).toList();
+      final updatedStudents =
+          classModel.enrolledStudentIds.where((id) => id != studentId).toList();
       classes[idx] = classModel.copyWith(enrolledStudentIds: updatedStudents);
       await _save(prefs, classes);
     }
@@ -63,7 +65,17 @@ class LocalDbService {
   Future<void> insertClass(ClassModel model) async {
     final prefs = await SharedPreferences.getInstance();
     final all = await _loadAll();
-    all.add(model);
+
+    // Check if class already exists
+    final existingIdx = all.indexWhere((c) => c.id == model.id);
+    if (existingIdx >= 0) {
+      // Update existing class instead of adding duplicate
+      all[existingIdx] = model;
+    } else {
+      // Add new class
+      all.add(model);
+    }
+
     await _save(prefs, all);
   }
 
@@ -73,8 +85,11 @@ class LocalDbService {
     final idx = classes.indexWhere((c) => c.id == model.id);
     if (idx >= 0) {
       classes[idx] = model;
-      await _save(prefs, classes);
+    } else {
+      // If class doesn't exist, add it
+      classes.add(model);
     }
+    await _save(prefs, classes);
   }
 
   Future<void> deleteClass(String id) async {
@@ -85,7 +100,8 @@ class LocalDbService {
   }
 
   Future<void> _save(SharedPreferences prefs, List<ClassModel> classes) async {
-    await prefs.setString(_keyClasses, jsonEncode(classes.map((c) => c.toMap()).toList()));
+    await prefs.setString(
+        _keyClasses, jsonEncode(classes.map((c) => c.toMap()).toList()));
   }
 
   Future<List<ClassModel>> _loadAll() async {
@@ -93,7 +109,9 @@ class LocalDbService {
     final raw = prefs.getString(_keyClasses);
     if (raw == null) return [];
     final decoded = jsonDecode(raw) as List<dynamic>;
-    return decoded.map((e) => ClassModel.fromMap(e as Map<String, dynamic>)).toList();
+    return decoded
+        .map((e) => ClassModel.fromMap(e as Map<String, dynamic>))
+        .toList();
   }
 
   // No sample classes - users create their own or join via invite code
@@ -131,8 +149,10 @@ class LocalDbService {
     await _saveSchedules(prefs, all);
   }
 
-  Future<void> _saveSchedules(SharedPreferences prefs, List<ScheduleModel> schedules) async {
-    await prefs.setString(_keySchedules, jsonEncode(schedules.map((s) => s.toMap()).toList()));
+  Future<void> _saveSchedules(
+      SharedPreferences prefs, List<ScheduleModel> schedules) async {
+    await prefs.setString(
+        _keySchedules, jsonEncode(schedules.map((s) => s.toMap()).toList()));
   }
 
   Future<List<ScheduleModel>> _loadAllSchedules() async {
@@ -140,7 +160,8 @@ class LocalDbService {
     final raw = prefs.getString(_keySchedules);
     if (raw == null) return [];
     final decoded = jsonDecode(raw) as List<dynamic>;
-    return decoded.map((e) => ScheduleModel.fromMap(e as Map<String, dynamic>)).toList();
+    return decoded
+        .map((e) => ScheduleModel.fromMap(e as Map<String, dynamic>))
+        .toList();
   }
-
 }

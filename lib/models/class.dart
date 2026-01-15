@@ -22,9 +22,9 @@ class AlertModel {
   }
 
   Map<String, dynamic> toMap() => {
-    'timeBeforeMinutes': timeBefore.inMinutes,
-    'isEnabled': isEnabled,
-  };
+        'timeBeforeMinutes': timeBefore.inMinutes,
+        'isEnabled': isEnabled,
+      };
 
   factory AlertModel.fromMap(Map<String, dynamic> map) {
     return AlertModel(
@@ -34,7 +34,8 @@ class AlertModel {
   }
 
   Map<String, dynamic> toJson() => toMap();
-  factory AlertModel.fromJson(Map<String, dynamic> json) => AlertModel.fromMap(json);
+  factory AlertModel.fromJson(Map<String, dynamic> json) =>
+      AlertModel.fromMap(json);
 }
 
 /// Represents a campus location with building and room information
@@ -82,12 +83,12 @@ class CampusLocationModel {
   }
 
   Map<String, dynamic> toMap() => {
-    'name': name,
-    'latitude': latitude,
-    'longitude': longitude,
-    'building': building,
-    'room': room,
-  };
+        'name': name,
+        'latitude': latitude,
+        'longitude': longitude,
+        'building': building,
+        'room': room,
+      };
 
   factory CampusLocationModel.fromMap(Map<String, dynamic> map) {
     return CampusLocationModel(
@@ -100,7 +101,8 @@ class CampusLocationModel {
   }
 
   Map<String, dynamic> toJson() => toMap();
-  factory CampusLocationModel.fromJson(Map<String, dynamic> json) => CampusLocationModel.fromMap(json);
+  factory CampusLocationModel.fromJson(Map<String, dynamic> json) =>
+      CampusLocationModel.fromMap(json);
 }
 
 /// Represents a class/course in the system
@@ -125,6 +127,8 @@ class ClassModel {
     this.facultyName,
     this.campusLocation,
     this.enrolledStudentIds = const [],
+    this.lateGracePeriodMinutes = 10,
+    this.absentGracePeriodMinutes = 30,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -149,6 +153,8 @@ class ClassModel {
   final String? facultyName;
   final CampusLocationModel? campusLocation;
   final List<String> enrolledStudentIds;
+  final int lateGracePeriodMinutes;
+  final int absentGracePeriodMinutes;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -177,6 +183,8 @@ class ClassModel {
     String? facultyName,
     CampusLocationModel? campusLocation,
     List<String>? enrolledStudentIds,
+    int? lateGracePeriodMinutes,
+    int? absentGracePeriodMinutes,
     DateTime? updatedAt,
   }) {
     return ClassModel(
@@ -199,36 +207,42 @@ class ClassModel {
       facultyName: facultyName ?? this.facultyName,
       campusLocation: campusLocation ?? this.campusLocation,
       enrolledStudentIds: enrolledStudentIds ?? this.enrolledStudentIds,
+      lateGracePeriodMinutes:
+          lateGracePeriodMinutes ?? this.lateGracePeriodMinutes,
+      absentGracePeriodMinutes:
+          absentGracePeriodMinutes ?? this.absentGracePeriodMinutes,
       createdAt: createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
     );
   }
 
   Map<String, dynamic> toMap() => {
-    'id': id,
-    'userId': userId,
-    'name': name,
-    'daysOfWeek': daysOfWeek,
-    'startHour': startTime.hour,
-    'startMinute': startTime.minute,
-    'endHour': endTime.hour,
-    'endMinute': endTime.minute,
-    'instructorOrRoom': instructorOrRoom,
-    'location': location,
-    'notes': notes,
-    'color': color.value,
-    'alerts': alerts.map((a) => a.toMap()).toList(),
-    'syncWithGoogle': syncWithGoogle,
-    'isModifiedLocally': isModifiedLocally,
-    'lastSyncedAt': lastSyncedAt?.toIso8601String(),
-    'inviteCode': inviteCode,
-    'facultyId': facultyId,
-    'facultyName': facultyName,
-    'campusLocation': campusLocation?.toMap(),
-    'enrolledStudentIds': enrolledStudentIds,
-    'createdAt': createdAt.toIso8601String(),
-    'updatedAt': updatedAt.toIso8601String(),
-  };
+        'id': id,
+        'userId': userId,
+        'name': name,
+        'daysOfWeek': daysOfWeek,
+        'startHour': startTime.hour,
+        'startMinute': startTime.minute,
+        'endHour': endTime.hour,
+        'endMinute': endTime.minute,
+        'instructorOrRoom': instructorOrRoom,
+        'location': location,
+        'notes': notes,
+        'color': color.value,
+        'alerts': alerts.map((a) => a.toMap()).toList(),
+        'syncWithGoogle': syncWithGoogle,
+        'isModifiedLocally': isModifiedLocally,
+        'lastSyncedAt': lastSyncedAt?.toIso8601String(),
+        'inviteCode': inviteCode,
+        'facultyId': facultyId,
+        'facultyName': facultyName,
+        'campusLocation': campusLocation?.toMap(),
+        'enrolledStudentIds': enrolledStudentIds,
+        'lateGracePeriodMinutes': lateGracePeriodMinutes,
+        'absentGracePeriodMinutes': absentGracePeriodMinutes,
+        'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
+      };
 
   factory ClassModel.fromMap(Map<String, dynamic> map) {
     return ClassModel(
@@ -249,27 +263,35 @@ class ClassModel {
       notes: map['notes'] as String? ?? '',
       color: Color(map['color'] as int),
       alerts: (map['alerts'] as List<dynamic>?)
-          ?.map((e) => AlertModel.fromMap(e as Map<String, dynamic>))
-          .toList() ?? [],
+              ?.map((e) => AlertModel.fromMap(e as Map<String, dynamic>))
+              .toList() ??
+          [],
       syncWithGoogle: map['syncWithGoogle'] as bool? ?? false,
       isModifiedLocally: map['isModifiedLocally'] as bool? ?? false,
-      lastSyncedAt: map['lastSyncedAt'] != null 
+      lastSyncedAt: map['lastSyncedAt'] != null
           ? DateTime.tryParse(map['lastSyncedAt'] as String)
           : null,
       inviteCode: map['inviteCode'] as String?,
       facultyId: map['facultyId'] as String?,
       facultyName: map['facultyName'] as String?,
       campusLocation: map['campusLocation'] != null
-          ? CampusLocationModel.fromMap(map['campusLocation'] as Map<String, dynamic>)
+          ? CampusLocationModel.fromMap(
+              map['campusLocation'] as Map<String, dynamic>)
           : null,
-      enrolledStudentIds: List<String>.from(map['enrolledStudentIds'] as List<dynamic>? ?? []),
-      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
-      updatedAt: DateTime.tryParse(map['updatedAt'] as String? ?? '') ?? DateTime.now(),
+      enrolledStudentIds:
+          List<String>.from(map['enrolledStudentIds'] as List<dynamic>? ?? []),
+      lateGracePeriodMinutes: map['lateGracePeriodMinutes'] as int? ?? 10,
+      absentGracePeriodMinutes: map['absentGracePeriodMinutes'] as int? ?? 30,
+      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ??
+          DateTime.now(),
+      updatedAt: DateTime.tryParse(map['updatedAt'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 
   Map<String, dynamic> toJson() => toMap();
-  factory ClassModel.fromJson(Map<String, dynamic> json) => ClassModel.fromMap(json);
+  factory ClassModel.fromJson(Map<String, dynamic> json) =>
+      ClassModel.fromMap(json);
 
   /// Check if this class conflicts with another class
   bool conflictsWith(ClassModel other) {
