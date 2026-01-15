@@ -24,7 +24,6 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
   final _name = TextEditingController();
   final _instructor = TextEditingController();
   final _location = TextEditingController();
-  final _notes = TextEditingController();
   final _roomController = TextEditingController();
   final _cacheService = CampusCacheService();
 
@@ -66,7 +65,6 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
       _name.text = args.name;
       _instructor.text = args.instructorOrRoom;
       _location.text = args.location;
-      _notes.text = args.notes;
       _start = args.startTime;
       _end = args.endTime;
       _days.clear();
@@ -90,7 +88,6 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
     _name.dispose();
     _instructor.dispose();
     _location.dispose();
-    _notes.dispose();
     _roomController.dispose();
     super.dispose();
   }
@@ -294,7 +291,6 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
       endTime: _end,
       instructorOrRoom: isFaculty ? _roomController.text : _instructor.text,
       location: _location.text,
-      notes: _notes.text,
       color: _color,
       alerts: alerts,
       syncWithGoogle: _syncToGoogle,
@@ -639,14 +635,6 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                                   ? 'Building / Additional Info'
                                   : 'Location / Building',
                               prefixIcon: const Icon(Icons.business))),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                          controller: _notes,
-                          maxLines: 3,
-                          decoration: const InputDecoration(
-                              labelText: 'Notes',
-                              prefixIcon: Icon(Icons.notes),
-                              alignLabelWithHint: true)),
                       const SizedBox(height: 16),
                       if (isFaculty) ...[
                         Text('Attendance Grace Periods',
@@ -757,10 +745,29 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                               .bodyMedium
                               ?.copyWith(fontWeight: FontWeight.w600)),
                       const SizedBox(height: 8),
-                      BlockPicker(
-                          pickerColor: _color,
-                          availableColors: AppColors.classPalette,
-                          onColorChanged: (c) => setState(() => _color = c)),
+                      GestureDetector(
+                        onTap: () => _showColorPickerModal(context),
+                        child: Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            color: _color,
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: _color.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.palette,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 16),
                       Text('Alerts',
                           style: Theme.of(context)
@@ -816,6 +823,40 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
     const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final sortedDays = List<int>.from(days)..sort();
     return sortedDays.map((d) => dayNames[d - 1]).join(', ');
+  }
+
+  void _showColorPickerModal(BuildContext context) {
+    Color tempColor = _color;
+    
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Select Color', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
+        content: SingleChildScrollView(
+          child: BlockPicker(
+            pickerColor: tempColor,
+            availableColors: AppColors.classPalette,
+            onColorChanged: (c) => tempColor = c,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              setState(() => _color = tempColor);
+              Navigator.pop(ctx);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: tempColor,
+            ),
+            child: const Text('OK', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showInviteCodeDialog() {

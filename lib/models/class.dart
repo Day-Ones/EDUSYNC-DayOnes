@@ -116,7 +116,6 @@ class ClassModel {
     required this.endTime,
     required this.instructorOrRoom,
     required this.location,
-    required this.notes,
     required this.color,
     required this.alerts,
     required this.syncWithGoogle,
@@ -142,7 +141,6 @@ class ClassModel {
   final TimeOfDay endTime;
   final String instructorOrRoom;
   final String location;
-  final String notes;
   final Color color;
   final List<AlertModel> alerts;
   final bool syncWithGoogle;
@@ -172,7 +170,6 @@ class ClassModel {
     TimeOfDay? endTime,
     String? instructorOrRoom,
     String? location,
-    String? notes,
     Color? color,
     List<AlertModel>? alerts,
     bool? syncWithGoogle,
@@ -196,7 +193,6 @@ class ClassModel {
       endTime: endTime ?? this.endTime,
       instructorOrRoom: instructorOrRoom ?? this.instructorOrRoom,
       location: location ?? this.location,
-      notes: notes ?? this.notes,
       color: color ?? this.color,
       alerts: alerts ?? this.alerts,
       syncWithGoogle: syncWithGoogle ?? this.syncWithGoogle,
@@ -227,7 +223,6 @@ class ClassModel {
         'endMinute': endTime.minute,
         'instructorOrRoom': instructorOrRoom,
         'location': location,
-        'notes': notes,
         'color': color.value,
         'alerts': alerts.map((a) => a.toMap()).toList(),
         'syncWithGoogle': syncWithGoogle,
@@ -260,7 +255,6 @@ class ClassModel {
       ),
       instructorOrRoom: map['instructorOrRoom'] as String? ?? '',
       location: map['location'] as String? ?? '',
-      notes: map['notes'] as String? ?? '',
       color: Color(map['color'] as int),
       alerts: (map['alerts'] as List<dynamic>?)
               ?.map((e) => AlertModel.fromMap(e as Map<String, dynamic>))
