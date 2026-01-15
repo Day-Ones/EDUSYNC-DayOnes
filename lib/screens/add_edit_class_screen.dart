@@ -189,7 +189,7 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                           borderRadius: BorderRadius.circular(2))),
                   const SizedBox(height: 16),
                   Text('Select Campus',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.inter(
                           fontSize: 18, fontWeight: FontWeight.w600)),
                 ],
               ),
@@ -203,18 +203,18 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                     leading: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                          color: const Color(0xFF2196F3).withOpacity(0.1),
+                          color: AppColors.primary.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8)),
-                      child: const Icon(Icons.map, color: Color(0xFF2196F3)),
+                      child: const Icon(Icons.map, color: AppColors.primary),
                     ),
                     title: Text('Search on Maps',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.inter(
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF2196F3))),
+                            color: AppColors.primary)),
                     subtitle: Text('Find any location on the map',
-                        style: GoogleFonts.albertSans(fontSize: 12)),
+                        style: GoogleFonts.inter(fontSize: 12)),
                     trailing: const Icon(Icons.arrow_forward_ios,
-                        size: 16, color: Color(0xFF2196F3)),
+                        size: 16, color: AppColors.primary),
                     onTap: () {
                       Navigator.pop(ctx);
                       _openMapSearch();
@@ -225,20 +225,20 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                     Padding(
                       padding: const EdgeInsets.only(left: 8, bottom: 8),
                       child: Text('Predefined Campuses',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: Colors.grey[600])),
                     ),
                     ...PredefinedCampuses.campuses.map((campus) => ListTile(
                           leading: const Icon(Icons.school,
-                              color: Color(0xFF2196F3)),
+                              color: AppColors.primary),
                           title: Text(campus.name,
-                              style: GoogleFonts.poppins(
+                              style: GoogleFonts.inter(
                                   fontWeight: FontWeight.w500)),
                           subtitle: Text(
                               '${campus.latitude.toStringAsFixed(4)}, ${campus.longitude.toStringAsFixed(4)}',
-                              style: GoogleFonts.albertSans(
+                              style: GoogleFonts.inter(
                                   fontSize: 12, color: Colors.grey[600])),
                           onTap: () {
                             setState(() => _selectedCampus = campus);
@@ -251,7 +251,7 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                     Padding(
                       padding: const EdgeInsets.only(left: 8, bottom: 8),
                       child: Text('Recent Searches',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: Colors.grey[600])),
@@ -263,13 +263,13 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                               leading:
                                   const Icon(Icons.history, color: Colors.grey),
                               title: Text(campus.name,
-                                  style: GoogleFonts.poppins(
+                                  style: GoogleFonts.inter(
                                       fontWeight: FontWeight.w500),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis),
                               subtitle: Text(
                                   '${campus.latitude.toStringAsFixed(4)}, ${campus.longitude.toStringAsFixed(4)}',
-                                  style: GoogleFonts.albertSans(
+                                  style: GoogleFonts.inter(
                                       fontSize: 12, color: Colors.grey[600])),
                               onTap: () {
                                 setState(() => _selectedCampus = campus);
@@ -368,30 +368,30 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
           title: Row(children: [
             const Icon(Icons.check_circle, color: Colors.green),
             const SizedBox(width: 8),
-            Text('Class Created!', style: GoogleFonts.poppins(fontSize: 18)),
+            Text('Class Created!', style: GoogleFonts.inter(fontSize: 18)),
           ]),
           content: Column(mainAxisSize: MainAxisSize.min, children: [
             Text('Share this code with your students:',
-                style: GoogleFonts.albertSans(color: Colors.grey[600])),
+                style: GoogleFonts.inter(color: Colors.grey[600])),
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFF2196F3).withOpacity(0.1),
+                color: AppColors.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF2196F3)),
+                border: Border.all(color: AppColors.primary),
               ),
               child:
                   Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                 Text(code,
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.inter(
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 4,
-                        color: const Color(0xFF2196F3))),
+                        color: AppColors.primary)),
                 const SizedBox(width: 12),
                 IconButton(
-                  icon: const Icon(Icons.copy, color: Color(0xFF2196F3)),
+                  icon: const Icon(Icons.copy, color: AppColors.primary),
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: code));
                     ScaffoldMessenger.of(ctx).showSnackBar(
@@ -481,7 +481,7 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                         _name.text.isEmpty
                             ? (_isEditing ? 'Edit Class' : 'New Class')
                             : _name.text,
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.inter(
                           fontSize: 24,
                           fontWeight: FontWeight.w700,
                         ),
@@ -494,7 +494,7 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                           const SizedBox(width: 8),
                           Text(
                             '${_start.format(context)} - ${_end.format(context)}',
-                            style: GoogleFonts.albertSans(
+                            style: GoogleFonts.inter(
                               fontSize: 16,
                               color: Colors.grey[700],
                             ),
@@ -509,7 +509,7 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                           const SizedBox(width: 8),
                           Text(
                             _formatDays(_days.toList()),
-                            style: GoogleFonts.albertSans(
+                            style: GoogleFonts.inter(
                               fontSize: 14,
                               color: Colors.grey[600],
                             ),
@@ -558,7 +558,7 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                                 Expanded(
                                   child: Text(
                                     'Schedule Conflict Detected',
-                                    style: GoogleFonts.poppins(
+                                    style: GoogleFonts.inter(
                                       fontWeight: FontWeight.w600,
                                       color: Colors.orange[800],
                                     ),
@@ -576,7 +576,7 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                                   padding: const EdgeInsets.only(left: 32, bottom: 4),
                                   child: Text(
                                     '• ${conflict.name} ($dayNames, ${_formatTimeShort(conflict.startTime)} - ${_formatTimeShort(conflict.endTime)})',
-                                    style: GoogleFonts.albertSans(
+                                    style: GoogleFonts.inter(
                                       fontSize: 13,
                                       color: Colors.orange[900],
                                     ),
@@ -588,7 +588,7 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                                 padding: const EdgeInsets.only(left: 32),
                                 child: Text(
                                   'Please adjust the time or days to resolve.',
-                                  style: GoogleFonts.albertSans(
+                                  style: GoogleFonts.inter(
                                     fontSize: 12,
                                     color: Colors.grey[600],
                                     fontStyle: FontStyle.italic,
@@ -634,7 +634,7 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                               _checkScheduleConflicts();
                             },
                             selectedColor:
-                                const Color(0xFF2196F3).withOpacity(0.2),
+                                AppColors.primary.withOpacity(0.2),
                           );
                         }),
                       ),
@@ -673,11 +673,11 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                             decoration: BoxDecoration(
                               border: Border.all(
                                   color: _selectedCampus != null
-                                      ? const Color(0xFF2196F3)
+                                      ? AppColors.primary
                                       : Colors.grey[400]!),
                               borderRadius: BorderRadius.circular(8),
                               color: _selectedCampus != null
-                                  ? const Color(0xFF2196F3).withOpacity(0.05)
+                                  ? AppColors.primary.withOpacity(0.05)
                                   : null,
                             ),
                             child: Row(
@@ -687,7 +687,7 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                                         ? Icons.location_on
                                         : Icons.school,
                                     color: _selectedCampus != null
-                                        ? const Color(0xFF2196F3)
+                                        ? AppColors.primary
                                         : Colors.grey[600]),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -697,18 +697,18 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(_selectedCampus!.name,
-                                                style: GoogleFonts.poppins(
+                                                style: GoogleFonts.inter(
                                                     fontWeight:
                                                         FontWeight.w600)),
                                             Text(
                                                 '${_selectedCampus!.latitude.toStringAsFixed(4)}, ${_selectedCampus!.longitude.toStringAsFixed(4)}',
-                                                style: GoogleFonts.albertSans(
+                                                style: GoogleFonts.inter(
                                                     fontSize: 12,
                                                     color: Colors.grey[600])),
                                           ],
                                         )
                                       : Text('Select a campus',
-                                          style: GoogleFonts.albertSans(
+                                          style: GoogleFonts.inter(
                                               color: Colors.grey[600])),
                                 ),
                                 if (_selectedCampus != null)
@@ -774,12 +774,12 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text('Late Grace Period',
-                                            style: GoogleFonts.poppins(
+                                            style: GoogleFonts.inter(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w500)),
                                         Text(
                                             'Students can check in late within this period',
-                                            style: GoogleFonts.albertSans(
+                                            style: GoogleFonts.inter(
                                                 fontSize: 12,
                                                 color: Colors.grey[600])),
                                       ],
@@ -815,12 +815,12 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text('Absent Grace Period',
-                                            style: GoogleFonts.poppins(
+                                            style: GoogleFonts.inter(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w500)),
                                         Text(
                                             'After this period, students are marked absent',
-                                            style: GoogleFonts.albertSans(
+                                            style: GoogleFonts.inter(
                                                 fontSize: 12,
                                                 color: Colors.grey[600])),
                                       ],
@@ -882,32 +882,6 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Text('Alerts',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(fontWeight: FontWeight.w600)),
-                      SwitchListTile(
-                        value: _alertEnabled,
-                        onChanged: (v) => setState(() => _alertEnabled = v),
-                        title: const Text('Enable Class Reminders'),
-                        subtitle: Text(
-                          _alertEnabled
-                              ? 'You will be notified 15 minutes before class'
-                              : 'No reminders',
-                          style:
-                              TextStyle(fontSize: 12, color: Colors.grey[600]),
-                        ),
-                        secondary: Icon(
-                          _alertEnabled
-                              ? Icons.notifications_active
-                              : Icons.notifications_off,
-                          color: _alertEnabled
-                              ? const Color(0xFF2196F3)
-                              : Colors.grey,
-                        ),
-                      ),
                       const SizedBox(height: 24),
                       _buildSaveButtons(
                           context, classProvider, user, isFaculty),
@@ -947,7 +921,7 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Select Color', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
+        title: Text('Select Color', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600)),
         content: SingleChildScrollView(
           child: BlockPicker(
             pickerColor: tempColor,
@@ -970,66 +944,6 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
             ),
             child: const Text('OK', style: TextStyle(color: Colors.white)),
           ),
-        ],
-      ),
-    );
-  }
-
-  void _showInviteCodeDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Row(children: [
-          const Icon(Icons.share, color: Color(0xFF2196F3)),
-          const SizedBox(width: 8),
-          Text('Class Invite Code', style: GoogleFonts.poppins(fontSize: 18))
-        ]),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Share this code with your students:',
-                style: GoogleFonts.albertSans(color: Colors.grey[600])),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              decoration: BoxDecoration(
-                  color: const Color(0xFF2196F3).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF2196F3))),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(_inviteCode ?? 'N/A',
-                      style: GoogleFonts.poppins(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 4,
-                          color: const Color(0xFF2196F3))),
-                  const SizedBox(width: 12),
-                  IconButton(
-                      icon: const Icon(Icons.copy, color: Color(0xFF2196F3)),
-                      onPressed: () {
-                        Clipboard.setData(
-                            ClipboardData(text: _inviteCode ?? ''));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Code copied')));
-                      }),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-              onPressed: () {
-                setState(() => _inviteCode = ClassModel.generateInviteCode());
-                Navigator.pop(context);
-                _showInviteCodeDialog();
-              },
-              child: const Text('Regenerate')),
-          ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Done')),
         ],
       ),
     );

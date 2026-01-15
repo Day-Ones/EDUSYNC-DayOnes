@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../services/connectivity_service.dart';
 import '../services/firebase_service.dart';
@@ -6,9 +7,18 @@ import '../services/firebase_service.dart';
 class SyncManagerProvider extends ChangeNotifier {
   final ConnectivityService _connectivityService;
   final FirebaseService _firebaseService;
+  Timer? _periodicSyncTimer;
 
   SyncManagerProvider(this._connectivityService, this._firebaseService) {
     _connectivityService.addListener(_onConnectivityChanged);
+    // Start periodic sync check every 15 seconds
+    _startPeriodicSyncCheck();
+    // Do initial sync check after a short delay
+    Future.delayed(const Duration(seconds: 2), () {
+      if (_connectivityService.isOnline) {
+        _performAutoSync();
+      }
+    });
   }
 
   bool _isSyncing = false;
@@ -21,7 +31,28 @@ class SyncManagerProvider extends ChangeNotifier {
 
   void _onConnectivityChanged() {
     if (_connectivityService.isOnline && !_isSyncing) {
-      // Device just came online - trigger sync
+      // Device just came online - trigger sync immediately
+      debugPrint('Connectivity changed to ONLINE - triggering auto sync');
+      _performAutoSync();
+    }
+  }
+
+  /// Start periodic sync check for pending data
+  void _startPeriodicSyncCheck() {
+    _periodicSyncTimer?.cancel();
+    _periodicSyncTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      if (_connectivityService.isOnline && !_isSyncing) {
+        // Check for pending data periodically
+        _performAutoSync();
+      }
+    });
+  }
+
+  /// Mark that there's pending data to sync (called after offline operations)
+  void markPendingData() {
+    // Try to sync immediately if online
+    if (_connectivityService.isOnline && !_isSyncing) {
+      debugPrint('Pending data marked - attempting immediate sync');
       _performAutoSync();
     }
   }
@@ -51,11 +82,18 @@ class SyncManagerProvider extends ChangeNotifier {
       // Sync attendance records (for students)
       final attendanceCount = await _firebaseService.syncPendingAttendance();
 
+      // Sync pending class deletes
+      final deleteCount = await _firebaseService.syncPendingDeletes();
+
       _lastSyncTime = DateTime.now();
 
-      if (qrCount > 0 || attendanceCount > 0) {
-        _lastSyncStatus =
-            'Synced: $qrCount QR codes, $attendanceCount attendance records';
+      final syncedItems = <String>[];
+      if (qrCount > 0) syncedItems.add('$qrCount QR codes');
+      if (attendanceCount > 0) syncedItems.add('$attendanceCount attendance records');
+      if (deleteCount > 0) syncedItems.add('$deleteCount class deletes');
+
+      if (syncedItems.isNotEmpty) {
+        _lastSyncStatus = 'Synced: ${syncedItems.join(', ')}';
         debugPrint(_lastSyncStatus);
       } else {
         _lastSyncStatus = 'All data is up to date';
@@ -71,6 +109,7 @@ class SyncManagerProvider extends ChangeNotifier {
 
   @override
   void dispose() {
+    _periodicSyncTimer?.cancel();
     _connectivityService.removeListener(_onConnectivityChanged);
     super.dispose();
   }

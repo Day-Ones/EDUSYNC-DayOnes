@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/attendance.dart';
 
 /// Service to handle offline data storage and synchronization
 class OfflineSyncService {
@@ -10,6 +9,7 @@ class OfflineSyncService {
 
   static const _keyPendingAttendance = 'pending_attendance';
   static const _keyPendingQrCodes = 'pending_qr_codes';
+  static const _keyPendingDeletes = 'pending_class_deletes';
 
   // ==================== QR CODE OFFLINE STORAGE ====================
 
@@ -144,6 +144,9 @@ class OfflineSyncService {
         final docRef =
             _firestore.collection('attendance_records').doc(recordId);
         final dateStr = data['date'].split('T')[0]; // Extract date part
+        
+        // Parse the original check-in time to preserve it
+        final originalCheckedInAt = DateTime.parse(data['checkedInAt']);
 
         batch.set(docRef, {
           'recordId': recordId,
@@ -152,9 +155,10 @@ class OfflineSyncService {
           'studentId': data['studentId'],
           'studentName': data['studentName'],
           'date': dateStr,
-          'checkedInAt': FieldValue.serverTimestamp(),
+          'checkedInAt': Timestamp.fromDate(originalCheckedInAt), // Preserve original timestamp
           'status': data['status'] ?? 'present',
           'syncedAt': FieldValue.serverTimestamp(),
+          'syncedFromOffline': true, // Mark as synced from offline
         });
         syncedCount++;
       }
@@ -205,6 +209,111 @@ class OfflineSyncService {
   Future<void> clearAllOfflineData() async {
     await _clearPendingQrCodes();
     await _clearPendingAttendance();
+    await _clearPendingDeletes();
     debugPrint('Cleared all offline data');
+  }
+
+  // ==================== CLASS DELETE OFFLINE STORAGE ====================
+
+  /// Save class delete request locally (when Firebase delete fails)
+  Future<void> saveDeleteLocally(String classId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final existing = await _loadPendingDeletes();
+
+    existing[classId] = {
+      'classId': classId,
+      'requestedAt': DateTime.now().toIso8601String(),
+    };
+
+    await prefs.setString(_keyPendingDeletes, jsonEncode(existing));
+    debugPrint('Class delete saved locally: $classId');
+  }
+
+  /// Sync pending class deletes to Firebase
+  Future<int> syncPendingDeletes() async {
+    final pending = await _loadPendingDeletes();
+    if (pending.isEmpty) return 0;
+
+    int syncedCount = 0;
+    final toRemove = <String>[];
+
+    for (final entry in pending.entries) {
+      final classId = entry.key;
+
+      try {
+        // Delete the class document
+        await _firestore.collection('classes').doc(classId).delete();
+
+        // Delete class_students documents
+        final studentsSnapshot = await _firestore
+            .collection('class_students')
+            .where('classId', isEqualTo: classId)
+            .get();
+
+        for (final doc in studentsSnapshot.docs) {
+          await doc.reference.delete();
+        }
+
+        // Delete attendance records
+        final attendanceSnapshot = await _firestore
+            .collection('attendance_records')
+            .where('classId', isEqualTo: classId)
+            .get();
+
+        for (final doc in attendanceSnapshot.docs) {
+          await doc.reference.delete();
+        }
+
+        // Delete attendance sessions
+        final sessionsSnapshot = await _firestore
+            .collection('attendance_sessions')
+            .where('classId', isEqualTo: classId)
+            .get();
+
+        for (final doc in sessionsSnapshot.docs) {
+          await doc.reference.delete();
+        }
+
+        toRemove.add(classId);
+        syncedCount++;
+        debugPrint('Synced delete for class: $classId');
+      } catch (e) {
+        debugPrint('Error syncing delete for class $classId: $e');
+      }
+    }
+
+    // Remove successfully synced deletes
+    if (toRemove.isNotEmpty) {
+      for (final id in toRemove) {
+        pending.remove(id);
+      }
+      final prefs = await SharedPreferences.getInstance();
+      if (pending.isEmpty) {
+        await prefs.remove(_keyPendingDeletes);
+      } else {
+        await prefs.setString(_keyPendingDeletes, jsonEncode(pending));
+      }
+    }
+
+    debugPrint('Synced $syncedCount class deletes to Firebase');
+    return syncedCount;
+  }
+
+  /// Get count of pending deletes
+  Future<int> getPendingDeleteCount() async {
+    final pending = await _loadPendingDeletes();
+    return pending.length;
+  }
+
+  Future<Map<String, dynamic>> _loadPendingDeletes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_keyPendingDeletes);
+    if (raw == null) return {};
+    return Map<String, dynamic>.from(jsonDecode(raw));
+  }
+
+  Future<void> _clearPendingDeletes() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyPendingDeletes);
   }
 }

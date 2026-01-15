@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/location.dart';
 import '../providers/location_provider.dart';
+import '../theme/app_theme.dart';
 
 class LocationSettingsScreen extends StatelessWidget {
   const LocationSettingsScreen({super.key});
@@ -18,9 +19,9 @@ class LocationSettingsScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           'Location Sharing',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
         ),
-        backgroundColor: const Color(0xFF2196F3),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
       body: ListView(
@@ -43,7 +44,7 @@ class LocationSettingsScreen extends StatelessWidget {
                   Expanded(
                     child: Text(
                       locationProvider.error!,
-                      style: GoogleFonts.albertSans(color: Colors.red[700], fontSize: 13),
+                      style: GoogleFonts.inter(color: Colors.red[700], fontSize: 13),
                     ),
                   ),
                   IconButton(
@@ -78,7 +79,7 @@ class LocationSettingsScreen extends StatelessWidget {
                     locationProvider.isSharing 
                         ? 'Location Sharing Active' 
                         : 'Location Sharing Off',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
                     ),
@@ -88,7 +89,7 @@ class LocationSettingsScreen extends StatelessWidget {
                     locationProvider.isSharing
                         ? 'Students can see your proximity to campus'
                         : 'Your location is private',
-                    style: GoogleFonts.albertSans(
+                    style: GoogleFonts.inter(
                       fontSize: 14,
                       color: Colors.grey[600],
                     ),
@@ -122,7 +123,7 @@ class LocationSettingsScreen extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: locationProvider.isSharing 
                             ? Colors.red 
-                            : const Color(0xFF2196F3),
+                            : AppColors.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
@@ -149,7 +150,7 @@ class LocationSettingsScreen extends StatelessWidget {
                   children: [
                     Text(
                       'Current Status',
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -181,7 +182,7 @@ class LocationSettingsScreen extends StatelessWidget {
                         children: [
                           Text(
                             'Location Permission Required',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: Colors.orange[900],
@@ -189,7 +190,7 @@ class LocationSettingsScreen extends StatelessWidget {
                           ),
                           Text(
                             'Enable location access to share your status',
-                            style: GoogleFonts.albertSans(
+                            style: GoogleFonts.inter(
                               fontSize: 12,
                               color: Colors.orange[800],
                             ),
@@ -224,7 +225,7 @@ class LocationSettingsScreen extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         'How it works',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: Colors.blue[900],
@@ -287,7 +288,7 @@ class LocationSettingsScreen extends StatelessWidget {
             children: [
               Text(
                 _getStatusText(status),
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: _getStatusColor(status),
@@ -295,7 +296,7 @@ class LocationSettingsScreen extends StatelessWidget {
               ),
               Text(
                 _formatDistance(distance),
-                style: GoogleFonts.albertSans(
+                style: GoogleFonts.inter(
                   fontSize: 13,
                   color: Colors.grey[600],
                 ),
@@ -319,7 +320,7 @@ class LocationSettingsScreen extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: GoogleFonts.albertSans(
+                style: GoogleFonts.inter(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: Colors.blue[900],
@@ -327,7 +328,7 @@ class LocationSettingsScreen extends StatelessWidget {
               ),
               Text(
                 subtitle,
-                style: GoogleFonts.albertSans(
+                style: GoogleFonts.inter(
                   fontSize: 12,
                   color: Colors.blue[700],
                 ),

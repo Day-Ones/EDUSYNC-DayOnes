@@ -2,19 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:smart_scheduler/models/class.dart';
 import 'package:smart_scheduler/services/local_db_service.dart';
 import 'package:smart_scheduler/services/firebase_service.dart';
-import 'package:smart_scheduler/services/calendar_service.dart';
 
 class ClassProvider extends ChangeNotifier {
-  ClassProvider(this._dbService, this._firebaseService, [this._calendarService]);
+  ClassProvider(this._dbService, this._firebaseService);
 
   final LocalDbService _dbService;
   final FirebaseService _firebaseService;
-  final CalendarService? _calendarService;
   List<ClassModel> _classes = [];
   List<ClassModel> _enrolledClasses = [];
   bool _loading = false;
   String? _currentUserId;
-  bool? _isStudent;
 
   List<ClassModel> get classes => _classes;
   List<ClassModel> get enrolledClasses => _enrolledClasses;
@@ -24,7 +21,6 @@ class ClassProvider extends ChangeNotifier {
   Future<void> loadForUser(String userId, {required bool isStudent}) async {
     _loading = true;
     _currentUserId = userId;
-    _isStudent = isStudent;
     notifyListeners();
 
     // Load from local storage first for immediate UI update
@@ -80,7 +76,7 @@ class ClassProvider extends ChangeNotifier {
 
   Future<void> addOrUpdate(ClassModel model) async {
     final isUpdate = _classes.indexWhere((c) => c.id == model.id) >= 0;
-    
+
     if (isUpdate) {
       _classes[_classes.indexWhere((c) => c.id == model.id)] = model;
       await _dbService.updateClass(model);
@@ -102,36 +98,60 @@ class ClassProvider extends ChangeNotifier {
   }
 
   Future<void> delete(String id) async {
-    // Get the class before deleting
+    // Check if class exists in either list
     final classIndex = _classes.indexWhere((c) => c.id == id);
-    if (classIndex < 0) return; // Class not found
-    
-    final classModel = _classes[classIndex];
-    
-    // Remove from local list first for immediate UI update
+    final enrolledIndex = _enrolledClasses.indexWhere((c) => c.id == id);
+
+    if (classIndex < 0 && enrolledIndex < 0) {
+      debugPrint('Class $id not found in any list');
+      return; // Class not found
+    }
+
+    // Remove from local lists first for immediate UI update
     _classes.removeWhere((c) => c.id == id);
+    _enrolledClasses.removeWhere((c) => c.id == id);
+
     notifyListeners();
-    
+
     // Delete from local database
-    await _dbService.deleteClass(id);
-    
-    // Delete from Firebase (this also unenrolls all students)
+    try {
+      await _dbService.deleteClass(id);
+      debugPrint('Class $id deleted from local DB');
+    } catch (e) {
+      debugPrint('Error deleting class from local DB: $e');
+    }
+
+    // Try to delete from Firebase (will queue for later if fails)
     try {
       final isOnline = await _firebaseService.isOnline();
       if (isOnline) {
-        await _firebaseService.deleteClass(id);
+        final success = await _firebaseService.deleteClass(id);
+        if (success) {
+          debugPrint('Firebase delete for class $id: success');
+        } else {
+          debugPrint('Firebase delete for class $id: queued for later sync');
+        }
+      } else {
+        // Offline - queue for later
+        debugPrint('Offline - Firebase delete queued for class $id');
+        await _firebaseService
+            .syncPendingDeletes(); // This will save to pending
       }
     } catch (e) {
-      debugPrint('Error deleting class from Firebase: $e');
+      debugPrint('Firebase delete error (non-fatal): $e');
+      // Firebase delete failed but local delete succeeded - that's okay
     }
-    
-    // Delete calendar events for this class
-    if (_calendarService != null) {
-      try {
-        await _calendarService!.deleteClassEvents(classModel);
-      } catch (e) {
-        debugPrint('Error deleting calendar events: $e');
+  }
+
+  /// Sync any pending operations (deletes, etc.)
+  Future<void> syncPendingOperations() async {
+    try {
+      final isOnline = await _firebaseService.isOnline();
+      if (isOnline) {
+        await _firebaseService.syncPendingDeletes();
       }
+    } catch (e) {
+      debugPrint('Error syncing pending operations: $e');
     }
   }
 
@@ -148,6 +168,11 @@ class ClassProvider extends ChangeNotifier {
             await _firebaseService.findClassByInviteCode(inviteCode);
         if (firebaseClassData != null) {
           classModel = ClassModel.fromMap(firebaseClassData);
+
+          // Check if enrollment is open
+          if (!classModel.isEnrollmentOpen) {
+            return 'This class is no longer accepting new students. Please contact your instructor.';
+          }
 
           // Check if already enrolled
           if (classModel.enrolledStudentIds.contains(studentId)) {
@@ -175,6 +200,11 @@ class ClassProvider extends ChangeNotifier {
       classModel = await _dbService.findClassByInviteCode(inviteCode);
       if (classModel == null) {
         return 'Invalid invite code. Please check and try again.';
+      }
+
+      // Check if enrollment is open
+      if (!classModel.isEnrollmentOpen) {
+        return 'This class is no longer accepting new students. Please contact your instructor.';
       }
 
       if (classModel.enrolledStudentIds.contains(studentId)) {

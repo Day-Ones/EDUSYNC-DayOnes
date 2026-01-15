@@ -30,6 +30,14 @@
           }
         },
         {
+          "client_id": "293968934774-p2a1jdd275896nkpsaio1f2o2fvh16ro.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.dayones.edusync",
+            "certificate_hash": "b40555fd64c4adbd2c7b67adb359adb4d8e58e83"
+          }
+        },
+        {
           "client_id": "293968934774-gj2mht7ijc31b9qafje0n6d7a3nfutmv.apps.googleusercontent.com",
           "client_type": 3
         }

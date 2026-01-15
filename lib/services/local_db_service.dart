@@ -1,9 +1,7 @@
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/class.dart';
 import '../models/schedule.dart';
-import '../theme/app_theme.dart';
 
 class LocalDbService {
   static const _keyClasses = 'classes_storage_v1';

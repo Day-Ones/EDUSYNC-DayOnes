@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../models/class.dart';
 import '../providers/attendance_provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/sync_manager_provider.dart';
+import '../theme/app_theme.dart';
 import '../widgets/connectivity_banner.dart';
 
 class AttendanceScannerScreen extends StatefulWidget {
@@ -65,12 +67,21 @@ class _AttendanceScannerScreenState extends State<AttendanceScannerScreen> {
       widget.classModel,
     );
 
+    // If saved offline, mark pending data for auto-sync
+    final isOfflineSave = (result['message'] as String).toLowerCase().contains('offline');
+    if (isOfflineSave && mounted) {
+      context.read<SyncManagerProvider>().markPendingData();
+    }
+
     if (mounted) {
       _showResult(result['success'] as bool, result['message'] as String);
     }
   }
 
   void _showResult(bool success, String message) {
+    // Check if this was an offline save
+    final isOfflineSave = message.toLowerCase().contains('offline');
+    
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -79,22 +90,53 @@ class _AttendanceScannerScreenState extends State<AttendanceScannerScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              success ? Icons.check_circle : Icons.error,
+              success 
+                  ? (isOfflineSave ? Icons.cloud_off_rounded : Icons.check_circle)
+                  : Icons.error,
               size: 64,
-              color: success ? Colors.green : Colors.red,
+              color: success 
+                  ? (isOfflineSave ? Colors.orange : Colors.green)
+                  : Colors.red,
             ),
             const SizedBox(height: 16),
             Text(
-              success ? 'Success!' : 'Error',
-              style: GoogleFonts.poppins(
+              success 
+                  ? (isOfflineSave ? 'Saved Offline' : 'Success!')
+                  : 'Error',
+              style: GoogleFonts.inter(
                   fontSize: 20, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: GoogleFonts.albertSans(color: Colors.grey[600]),
+              style: GoogleFonts.inter(color: Colors.grey[600]),
             ),
+            if (isOfflineSave) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: Colors.orange, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Your attendance will sync automatically when you\'re back online',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: Colors.orange[800],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
         actions: [
@@ -104,7 +146,9 @@ class _AttendanceScannerScreenState extends State<AttendanceScannerScreen> {
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: success ? Colors.green : const Color(0xFF2196F3),
+              backgroundColor: success 
+                  ? (isOfflineSave ? Colors.orange : Colors.green)
+                  : AppColors.primary,
             ),
             child: Text(success ? 'Done' : 'Try Again',
                 style: const TextStyle(color: Colors.white)),
@@ -125,7 +169,7 @@ class _AttendanceScannerScreenState extends State<AttendanceScannerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2196F3),
+        backgroundColor: AppColors.primary,
         elevation: 0,
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
@@ -166,7 +210,7 @@ class _AttendanceScannerScreenState extends State<AttendanceScannerScreen> {
                       height: 280,
                       decoration: BoxDecoration(
                         border: Border.all(
-                            color: const Color(0xFF2196F3), width: 3),
+                            color: AppColors.primary, width: 3),
                         borderRadius: BorderRadius.circular(16),
                       ),
                     ),
@@ -199,7 +243,7 @@ class _AttendanceScannerScreenState extends State<AttendanceScannerScreen> {
                         ),
                         child: Text(
                           'Point camera at QR code',
-                          style: GoogleFonts.albertSans(
+                          style: GoogleFonts.inter(
                               color: Colors.white, fontSize: 16),
                         ),
                       ),
@@ -253,19 +297,19 @@ class _AttendanceScannerScreenState extends State<AttendanceScannerScreen> {
           border: Border(
             top: alignment == Alignment.topLeft ||
                     alignment == Alignment.topRight
-                ? const BorderSide(color: Color(0xFF2196F3), width: 4)
+                ? const BorderSide(color: AppColors.primary, width: 4)
                 : BorderSide.none,
             bottom: alignment == Alignment.bottomLeft ||
                     alignment == Alignment.bottomRight
-                ? const BorderSide(color: Color(0xFF2196F3), width: 4)
+                ? const BorderSide(color: AppColors.primary, width: 4)
                 : BorderSide.none,
             left: alignment == Alignment.topLeft ||
                     alignment == Alignment.bottomLeft
-                ? const BorderSide(color: Color(0xFF2196F3), width: 4)
+                ? const BorderSide(color: AppColors.primary, width: 4)
                 : BorderSide.none,
             right: alignment == Alignment.topRight ||
                     alignment == Alignment.bottomRight
-                ? const BorderSide(color: Color(0xFF2196F3), width: 4)
+                ? const BorderSide(color: AppColors.primary, width: 4)
                 : BorderSide.none,
           ),
         ),

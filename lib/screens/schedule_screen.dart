@@ -6,6 +6,7 @@ import '../models/schedule.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../providers/schedule_provider.dart';
+import '../theme/app_theme.dart';
 import 'add_edit_schedule_screen.dart';
 
 class ScheduleScreen extends StatefulWidget {
@@ -47,9 +48,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       appBar: AppBar(
         title: Text(
           'My Schedule',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
         ),
-        backgroundColor: const Color(0xFF2196F3),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -88,14 +89,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 titleCentered: true,
                 formatButtonVisible: true,
                 formatButtonDecoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFF2196F3)),
+                  border: Border.all(color: AppColors.primary),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                formatButtonTextStyle: const TextStyle(color: Color(0xFF2196F3)),
+                formatButtonTextStyle: const TextStyle(color: AppColors.primary),
               ),
               calendarStyle: const CalendarStyle(
                 selectedDecoration: BoxDecoration(
-                  color: Color(0xFF2196F3),
+                  color: AppColors.primary,
                   shape: BoxShape.circle,
                 ),
                 todayDecoration: BoxDecoration(
@@ -113,7 +114,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               children: [
                 Text(
                   _formatDate(_selectedDay),
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                   ),
@@ -121,7 +122,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 const Spacer(),
                 Text(
                   '${schedulesForDay.length} ${schedulesForDay.length == 1 ? 'event' : 'events'}',
-                  style: GoogleFonts.albertSans(
+                  style: GoogleFonts.inter(
                     color: Colors.grey[600],
                     fontSize: 14,
                   ),
@@ -151,11 +152,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           AddEditScheduleScreen.routeName,
           arguments: _selectedDay,
         ),
-        backgroundColor: const Color(0xFF2196F3),
+        backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add, color: Colors.white),
         label: Text(
           'Add Event',
-          style: GoogleFonts.albertSans(
+          style: GoogleFonts.inter(
             color: Colors.white,
             fontWeight: FontWeight.w600,
           ),
@@ -177,7 +178,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           const SizedBox(height: 16),
           Text(
             'No events scheduled',
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.w500,
               color: Colors.grey[600],
@@ -188,7 +189,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             isStudent
                 ? 'Add study sessions, meetings, or personal events'
                 : 'Add office hours, meetings, or appointments',
-            style: GoogleFonts.albertSans(
+            style: GoogleFonts.inter(
               fontSize: 14,
               color: Colors.grey[500],
             ),
@@ -265,14 +266,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   children: [
                     Text(
                       _formatTime(schedule.startTime),
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     Text(
                       _formatTime(schedule.endTime),
-                      style: GoogleFonts.albertSans(
+                      style: GoogleFonts.inter(
                         fontSize: 14,
                         color: Colors.grey[600],
                       ),
@@ -290,7 +291,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           Expanded(
                             child: Text(
                               schedule.title,
-                              style: GoogleFonts.poppins(
+                              style: GoogleFonts.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                                 decoration: schedule.isCompleted
@@ -306,7 +307,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         const SizedBox(height: 4),
                         Text(
                           schedule.description,
-                          style: GoogleFonts.albertSans(
+                          style: GoogleFonts.inter(
                             fontSize: 14,
                             color: Colors.grey[600],
                           ),
@@ -322,7 +323,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             const SizedBox(width: 4),
                             Text(
                               schedule.location!,
-                              style: GoogleFonts.albertSans(
+                              style: GoogleFonts.inter(
                                 fontSize: 12,
                                 color: Colors.grey[500],
                               ),
@@ -338,7 +339,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                             const SizedBox(width: 4),
                             Text(
                               'Recurring',
-                              style: GoogleFonts.albertSans(
+                              style: GoogleFonts.inter(
                                 fontSize: 12,
                                 color: Colors.grey[500],
                               ),
@@ -355,7 +356,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   onChanged: (_) {
                     context.read<ScheduleProvider>().toggleComplete(schedule.id);
                   },
-                  activeColor: const Color(0xFF2196F3),
+                  activeColor: AppColors.primary,
                 ),
               ],
             ),
@@ -390,7 +391,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       ),
       child: Text(
         label,
-        style: GoogleFonts.albertSans(
+        style: GoogleFonts.inter(
           fontSize: 10,
           fontWeight: FontWeight.w600,
           color: chipColor,

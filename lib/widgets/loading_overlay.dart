@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../theme/app_theme.dart';
 
 /// A beautiful, animated loading overlay widget
 /// Provides consistent loading UI across the app
@@ -124,7 +125,7 @@ class _LoadingCardState extends State<LoadingCard>
                 height: 48,
                 child: CircularProgressIndicator(
                   strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF2196F3)),
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
               ),
               const SizedBox(height: 16),
@@ -132,7 +133,7 @@ class _LoadingCardState extends State<LoadingCard>
             if (widget.message != null)
               Text(
                 widget.message!,
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                   color: Colors.grey[700],
@@ -182,7 +183,7 @@ class _EduSyncLoadingIndicatorState extends State<EduSyncLoadingIndicator>
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.color ?? const Color(0xFF2196F3);
+    final color = widget.color ?? AppColors.primary;
 
     return SizedBox(
       width: widget.size,
@@ -354,17 +355,17 @@ class FullScreenLoading extends StatelessWidget {
             if (message != null)
               Text(
                 message!,
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.inter(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF2196F3),
+                  color: AppColors.primary,
                 ),
               ),
             if (subMessage != null) ...[
               const SizedBox(height: 8),
               Text(
                 subMessage!,
-                style: GoogleFonts.albertSans(
+                style: GoogleFonts.inter(
                   fontSize: 14,
                   color: Colors.grey[600],
                 ),
@@ -415,7 +416,7 @@ class LoadingButtonContent extends StatelessWidget {
             const SizedBox(width: 12),
             Text(
               loadingText!,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.inter(
                 fontSize: fontSize,
                 fontWeight: FontWeight.w600,
                 color: textColor ?? Colors.white,
@@ -428,7 +429,7 @@ class LoadingButtonContent extends StatelessWidget {
 
     return Text(
       text,
-      style: GoogleFonts.poppins(
+      style: GoogleFonts.inter(
         fontSize: fontSize,
         fontWeight: FontWeight.w600,
         color: textColor ?? Colors.white,
@@ -473,7 +474,7 @@ class _DotsLoadingState extends State<DotsLoading>
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.color ?? const Color(0xFF2196F3);
+    final color = widget.color ?? AppColors.primary;
 
     return Row(
       mainAxisSize: MainAxisSize.min,

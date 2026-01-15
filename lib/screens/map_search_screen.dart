@@ -8,6 +8,7 @@ import '../models/class.dart';
 import '../services/campus_search_service.dart';
 import '../services/campus_cache_service.dart';
 import '../services/connectivity_service.dart';
+import '../theme/app_theme.dart';
 
 class MapSearchScreen extends StatefulWidget {
   const MapSearchScreen({super.key});
@@ -60,12 +61,12 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
           children: [
             const Icon(Icons.wifi_off, color: Colors.red),
             const SizedBox(width: 8),
-            Text('No Internet Connection', style: GoogleFonts.poppins()),
+            Text('No Internet Connection', style: GoogleFonts.inter()),
           ],
         ),
         content: Text(
           'Map features require an internet connection. Please connect to the internet to use this feature.',
-          style: GoogleFonts.albertSans(),
+          style: GoogleFonts.inter(),
         ),
         actions: [
           ElevatedButton(
@@ -74,7 +75,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
               Navigator.pop(context); // Close map screen
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2196F3),
+              backgroundColor: AppColors.primary,
             ),
             child: const Text('OK', style: TextStyle(color: Colors.white)),
           ),
@@ -192,7 +193,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
         builder: (ctx) {
           final controller = TextEditingController();
           return AlertDialog(
-            title: Text('Name this location', style: GoogleFonts.poppins()),
+            title: Text('Name this location', style: GoogleFonts.inter()),
             content: TextField(
               controller: controller,
               decoration: const InputDecoration(
@@ -235,7 +236,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2196F3),
+        backgroundColor: AppColors.primary,
         elevation: 0,
         leading: Padding(
           padding: const EdgeInsets.all(8.0),
@@ -365,12 +366,12 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
                         final result = _searchResults[index];
                         return ListTile(
                           leading: const Icon(Icons.school,
-                              color: Color(0xFF2196F3)),
+                              color: AppColors.primary),
                           title: Text(
                             result.name,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.albertSans(fontSize: 14),
+                            style: GoogleFonts.inter(fontSize: 14),
                           ),
                           dense: true,
                           onTap: () => _selectSearchResult(result),
@@ -402,14 +403,14 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
                         const SizedBox(height: 8),
                         Text(
                           _searchError!,
-                          style: GoogleFonts.albertSans(
+                          style: GoogleFonts.inter(
                               color: Colors.grey[600], fontSize: 13),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 8),
                         Text(
                           'Tip: Try full names like "Technological University of the Philippines" or tap on the map to select manually.',
-                          style: GoogleFonts.albertSans(
+                          style: GoogleFonts.inter(
                               color: Colors.grey[500], fontSize: 11),
                           textAlign: TextAlign.center,
                         ),
@@ -429,7 +430,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
                 FloatingActionButton.small(
                   heroTag: 'zoom_in',
                   backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF2196F3),
+                  foregroundColor: AppColors.primary,
                   onPressed: () {
                     _mapController.move(_mapController.camera.center,
                         _mapController.camera.zoom + 1);
@@ -440,7 +441,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
                 FloatingActionButton.small(
                   heroTag: 'zoom_out',
                   backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF2196F3),
+                  foregroundColor: AppColors.primary,
                   onPressed: () {
                     _mapController.move(_mapController.camera.center,
                         _mapController.camera.zoom - 1);
@@ -476,7 +477,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.location_on, color: Color(0xFF2196F3)),
+                        const Icon(Icons.location_on, color: AppColors.primary),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Column(
@@ -484,7 +485,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
                             children: [
                               Text(
                                 _selectedLocation!.name,
-                                style: GoogleFonts.poppins(
+                                style: GoogleFonts.inter(
                                   fontWeight: FontWeight.w600,
                                   fontSize: 16,
                                 ),
@@ -493,7 +494,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
                               ),
                               Text(
                                 '${_selectedLocation!.latitude.toStringAsFixed(6)}, ${_selectedLocation!.longitude.toStringAsFixed(6)}',
-                                style: GoogleFonts.albertSans(
+                                style: GoogleFonts.inter(
                                   fontSize: 12,
                                   color: Colors.grey[600],
                                 ),
@@ -509,7 +510,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
                       child: ElevatedButton(
                         onPressed: _confirmSelection,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2196F3),
+                          backgroundColor: AppColors.primary,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
@@ -517,7 +518,7 @@ class _MapSearchScreenState extends State<MapSearchScreen> {
                         ),
                         child: Text(
                           'Select This Location',
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.inter(
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),

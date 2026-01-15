@@ -105,6 +105,38 @@ class CampusLocationModel {
       CampusLocationModel.fromMap(json);
 }
 
+/// Represents an officer (student with schedule editing permissions)
+class OfficerModel {
+  OfficerModel({
+    required this.studentId,
+    required this.studentName,
+    DateTime? assignedAt,
+  }) : assignedAt = assignedAt ?? DateTime.now();
+
+  final String studentId;
+  final String studentName;
+  final DateTime assignedAt;
+
+  Map<String, dynamic> toMap() => {
+        'studentId': studentId,
+        'studentName': studentName,
+        'assignedAt': assignedAt.toIso8601String(),
+      };
+
+  factory OfficerModel.fromMap(Map<String, dynamic> map) {
+    return OfficerModel(
+      studentId: map['studentId'] as String,
+      studentName: map['studentName'] as String,
+      assignedAt: DateTime.tryParse(map['assignedAt'] as String? ?? '') ??
+          DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => toMap();
+  factory OfficerModel.fromJson(Map<String, dynamic> json) =>
+      OfficerModel.fromMap(json);
+}
+
 /// Represents a class/course in the system
 class ClassModel {
   ClassModel({
@@ -125,8 +157,10 @@ class ClassModel {
     this.facultyName,
     this.campusLocation,
     this.enrolledStudentIds = const [],
+    this.officerIds = const [],
     this.lateGracePeriodMinutes = 10,
     this.absentGracePeriodMinutes = 30,
+    this.isEnrollmentOpen = true,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -149,10 +183,15 @@ class ClassModel {
   final String? facultyName;
   final CampusLocationModel? campusLocation;
   final List<String> enrolledStudentIds;
+  final List<String> officerIds; // Students who can update class schedule
   final int lateGracePeriodMinutes;
   final int absentGracePeriodMinutes;
+  final bool isEnrollmentOpen; // Whether new students can join
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  /// Check if a student is an officer for this class
+  bool isOfficer(String studentId) => officerIds.contains(studentId);
 
   /// Generate a random 6-character invite code
   static String generateInviteCode() {
@@ -177,8 +216,10 @@ class ClassModel {
     String? facultyName,
     CampusLocationModel? campusLocation,
     List<String>? enrolledStudentIds,
+    List<String>? officerIds,
     int? lateGracePeriodMinutes,
     int? absentGracePeriodMinutes,
+    bool? isEnrollmentOpen,
     DateTime? updatedAt,
   }) {
     return ClassModel(
@@ -199,10 +240,12 @@ class ClassModel {
       facultyName: facultyName ?? this.facultyName,
       campusLocation: campusLocation ?? this.campusLocation,
       enrolledStudentIds: enrolledStudentIds ?? this.enrolledStudentIds,
+      officerIds: officerIds ?? this.officerIds,
       lateGracePeriodMinutes:
           lateGracePeriodMinutes ?? this.lateGracePeriodMinutes,
       absentGracePeriodMinutes:
           absentGracePeriodMinutes ?? this.absentGracePeriodMinutes,
+      isEnrollmentOpen: isEnrollmentOpen ?? this.isEnrollmentOpen,
       createdAt: createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
     );
@@ -228,8 +271,10 @@ class ClassModel {
         'facultyName': facultyName,
         'campusLocation': campusLocation?.toMap(),
         'enrolledStudentIds': enrolledStudentIds,
+        'officerIds': officerIds,
         'lateGracePeriodMinutes': lateGracePeriodMinutes,
         'absentGracePeriodMinutes': absentGracePeriodMinutes,
+        'isEnrollmentOpen': isEnrollmentOpen,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -268,8 +313,10 @@ class ClassModel {
           : null,
       enrolledStudentIds:
           List<String>.from(map['enrolledStudentIds'] as List<dynamic>? ?? []),
+      officerIds: List<String>.from(map['officerIds'] as List<dynamic>? ?? []),
       lateGracePeriodMinutes: map['lateGracePeriodMinutes'] as int? ?? 10,
       absentGracePeriodMinutes: map['absentGracePeriodMinutes'] as int? ?? 30,
+      isEnrollmentOpen: map['isEnrollmentOpen'] as bool? ?? true,
       createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ??
           DateTime.now(),
       updatedAt: DateTime.tryParse(map['updatedAt'] as String? ?? '') ??

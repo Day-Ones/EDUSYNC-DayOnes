@@ -10,14 +10,12 @@ import 'providers/auth_provider.dart';
 import 'providers/class_provider.dart';
 import 'providers/schedule_provider.dart';
 import 'providers/location_provider.dart';
-import 'providers/sync_provider.dart';
 import 'providers/attendance_provider.dart';
 import 'providers/sync_manager_provider.dart';
-import 'services/calendar_service.dart';
 import 'services/notification_service.dart';
+import 'theme/app_theme.dart';
 import 'screens/add_edit_class_screen.dart';
 import 'screens/add_edit_schedule_screen.dart';
-import 'screens/calendar_settings_screen.dart';
 import 'screens/class_details_screen.dart';
 import 'screens/classes_screen.dart';
 import 'screens/conflict_resolution_screen.dart';
@@ -38,12 +36,17 @@ import 'screens/weekly_view_screen.dart';
 import 'screens/student_list_screen.dart';
 import 'screens/attendance_scanner_screen.dart';
 import 'screens/map_search_screen.dart';
+import 'screens/manage_officers_screen.dart';
+import 'screens/edit_schedule_officer_screen.dart';
+import 'screens/schedule_notifications_screen.dart';
+import 'screens/schedule_management_screen.dart';
+import 'screens/edit_profile_screen.dart';
+import 'screens/reminder_settings_screen.dart';
 import 'services/auth_service.dart';
 import 'services/local_db_service.dart';
 import 'services/location_service.dart';
 import 'services/firebase_service.dart';
 import 'services/connectivity_service.dart';
-import 'theme/app_theme.dart';
 
 // Global key for showing snackbars from anywhere
 final GlobalKey<ScaffoldMessengerState> scaffoldMessengerKey =
@@ -67,25 +70,21 @@ void main() async {
 
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-  // Initialize Google Sign-In with calendar scope (shared between auth and calendar)
+  // Initialize Google Sign-In for authentication
   final googleSignIn = GoogleSignIn(
-    scopes: [
-      'email',
-      'https://www.googleapis.com/auth/calendar',
-    ],
+    scopes: ['email'],
   );
 
   // Initialize services
-  final authService = AuthService(const FlutterSecureStorage(), googleSignIn: googleSignIn);
+  final authService =
+      AuthService(const FlutterSecureStorage(), googleSignIn: googleSignIn);
   final dbService = LocalDbService();
   final locationService = LocationService();
-  final calendarService = CalendarService(googleSignIn);
 
   runApp(SmartSchedulerApp(
     authService: authService,
     dbService: dbService,
     locationService: locationService,
-    calendarService: calendarService,
     notificationService: notificationService,
   ));
 }
@@ -96,14 +95,12 @@ class SmartSchedulerApp extends StatefulWidget {
     required this.authService,
     required this.dbService,
     required this.locationService,
-    required this.calendarService,
     required this.notificationService,
   });
 
   final AuthService authService;
   final LocalDbService dbService;
   final LocationService locationService;
-  final CalendarService calendarService;
   final NotificationService notificationService;
 
   static final FirebaseService firebaseService = FirebaseService();
@@ -141,7 +138,7 @@ class _SmartSchedulerAppState extends State<SmartSchedulerApp> {
             ),
           ],
         ),
-        backgroundColor: const Color(0xFF2196F3),
+        backgroundColor: AppColors.primary,
         duration: const Duration(seconds: 10),
         behavior: SnackBarBehavior.floating,
         action: classId != null
@@ -170,14 +167,11 @@ class _SmartSchedulerAppState extends State<SmartSchedulerApp> {
             create: (_) => AuthProvider(widget.authService)..bootstrap()),
         ChangeNotifierProvider(
             create: (_) => ClassProvider(
-                widget.dbService, SmartSchedulerApp.firebaseService, widget.calendarService)),
+                widget.dbService, SmartSchedulerApp.firebaseService)),
         ChangeNotifierProvider(
             create: (_) => ScheduleProvider(widget.dbService)),
         ChangeNotifierProvider(
             create: (_) => LocationProvider(widget.locationService)),
-        ChangeNotifierProvider(
-            create: (_) => SyncProvider(widget.calendarService)),
-        Provider.value(value: widget.calendarService),
         ChangeNotifierProvider(
             create: (_) =>
                 AttendanceProvider(SmartSchedulerApp.firebaseService)),
@@ -210,8 +204,6 @@ class _SmartSchedulerAppState extends State<SmartSchedulerApp> {
           WeeklyViewScreen.routeName: (_) => const WeeklyViewScreen(),
           DailyViewScreen.routeName: (_) => const DailyViewScreen(),
           AddEditClassScreen.routeName: (_) => const AddEditClassScreen(),
-          CalendarSettingsScreen.routeName: (_) =>
-              const CalendarSettingsScreen(),
           ProfileScreen.routeName: (_) => const ProfileScreen(),
           SearchFilterScreen.routeName: (_) => const SearchFilterScreen(),
           ConflictResolutionScreen.routeName: (_) =>
@@ -231,6 +223,16 @@ class _SmartSchedulerAppState extends State<SmartSchedulerApp> {
             return AttendanceScannerScreen(classModel: classModel);
           },
           MapSearchScreen.routeName: (_) => const MapSearchScreen(),
+          ManageOfficersScreen.routeName: (_) => const ManageOfficersScreen(),
+          EditScheduleOfficerScreen.routeName: (_) =>
+              const EditScheduleOfficerScreen(),
+          ScheduleNotificationsScreen.routeName: (_) =>
+              const ScheduleNotificationsScreen(),
+          ScheduleManagementScreen.routeName: (_) =>
+              const ScheduleManagementScreen(),
+          EditProfileScreen.routeName: (_) => const EditProfileScreen(),
+          ReminderSettingsScreen.routeName: (_) =>
+              const ReminderSettingsScreen(),
         },
       ),
     );

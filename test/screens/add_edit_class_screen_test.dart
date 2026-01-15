@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // Note: Full widget tests for AddEditClassScreen would require mocking
@@ -20,8 +19,8 @@ void main() {
       // Therefore onPressed = null (button disabled)
       
       const hasScheduleConflict = true;
-      const hasConflict = false;
-      final canSave = !hasScheduleConflict && !hasConflict;
+      // Short-circuit: if hasScheduleConflict is true, canSave is false regardless of hasConflict
+      final canSave = !hasScheduleConflict;
       
       expect(canSave, isFalse);
     });
@@ -43,11 +42,16 @@ void main() {
     });
 
     test('save button should be disabled when both conflicts exist', () {
+      // Both must be false for canSave to be true
+      // When hasScheduleConflict = true, canSave is already false
       const hasScheduleConflict = true;
-      const hasConflict = true;
-      final canSave = !hasScheduleConflict && !hasConflict;
+      expect(!hasScheduleConflict, isFalse);
       
-      expect(canSave, isFalse);
+      // When hasConflict = true, canSave would also be false
+      const hasConflict = true;
+      expect(!hasConflict, isFalse);
+      
+      // Combined: canSave = !hasScheduleConflict && !hasConflict = false && false = false
     });
   });
 }

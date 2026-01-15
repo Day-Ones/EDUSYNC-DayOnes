@@ -10,6 +10,7 @@ import '../providers/auth_provider.dart';
 import '../providers/class_provider.dart';
 import '../providers/schedule_provider.dart';
 import '../providers/location_provider.dart';
+import '../theme/app_theme.dart';
 import '../widgets/loading_overlay.dart';
 import 'add_edit_class_screen.dart';
 import 'add_edit_schedule_screen.dart';
@@ -24,7 +25,8 @@ class ClassesScreen extends StatefulWidget {
   State<ClassesScreen> createState() => _ClassesScreenState();
 }
 
-class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProviderStateMixin {
+class _ClassesScreenState extends State<ClassesScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   DateTime _selectedDay = DateTime.now();
   DateTime _focusedDay = DateTime.now();
@@ -67,15 +69,15 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
       appBar: AppBar(
         title: Text(
           'Classes',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
         ),
-        backgroundColor: const Color(0xFF2196F3),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,
           tabs: tabs,
           indicatorColor: Colors.white,
-          labelStyle: GoogleFonts.albertSans(fontWeight: FontWeight.w600),
+          labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
         ),
       ),
       body: TabBarView(
@@ -83,7 +85,9 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
         children: [
           _buildClassesTab(context, isStudent),
           _buildScheduleTab(context),
-          isStudent ? _buildFacultyTrackerTab(context) : _buildLocationSettingsTab(context),
+          isStudent
+              ? _buildFacultyTrackerTab(context)
+              : _buildLocationSettingsTab(context),
         ],
       ),
       floatingActionButton: AnimatedBuilder(
@@ -105,10 +109,11 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
                 }
               } else if (_tabController.index == 1) {
                 // Schedule tab
-                Navigator.pushNamed(context, AddEditScheduleScreen.routeName, arguments: _selectedDay);
+                Navigator.pushNamed(context, AddEditScheduleScreen.routeName,
+                    arguments: _selectedDay);
               }
             },
-            backgroundColor: const Color(0xFF2196F3),
+            backgroundColor: AppColors.primary,
             child: const Icon(Icons.add, color: Colors.white),
           );
         },
@@ -132,7 +137,7 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
             const SizedBox(height: 16),
             Text(
               'Loading classes...',
-              style: GoogleFonts.albertSans(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 color: Colors.grey[600],
               ),
@@ -151,13 +156,15 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
             const SizedBox(height: 16),
             Text(
               isStudent ? 'No classes yet' : 'No classes created',
-              style: GoogleFonts.poppins(fontSize: 18, color: Colors.grey[600]),
+              style: GoogleFonts.inter(fontSize: 18, color: Colors.grey[600]),
             ),
             const SizedBox(height: 8),
             ElevatedButton.icon(
               onPressed: () => Navigator.pushNamed(
                 context,
-                isStudent ? JoinClassScreen.routeName : AddEditClassScreen.routeName,
+                isStudent
+                    ? JoinClassScreen.routeName
+                    : AddEditClassScreen.routeName,
               ),
               icon: Icon(isStudent ? Icons.group_add : Icons.add),
               label: Text(isStudent ? 'Join a Class' : 'Create Class'),
@@ -178,7 +185,8 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
     );
   }
 
-  Widget _buildClassCard(ClassModel classItem, bool isEnrolled, bool isStudent) {
+  Widget _buildClassCard(
+      ClassModel classItem, bool isEnrolled, bool isStudent) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
@@ -213,7 +221,7 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
                         Expanded(
                           child: Text(
                             classItem.name,
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -221,14 +229,15 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
                         ),
                         if (isEnrolled)
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.green.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               'Enrolled',
-                              style: GoogleFonts.albertSans(
+                              style: GoogleFonts.inter(
                                 fontSize: 10,
                                 color: Colors.green,
                                 fontWeight: FontWeight.w600,
@@ -242,20 +251,29 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
                       children: [
                         Icon(Icons.schedule, size: 14, color: Colors.grey[600]),
                         const SizedBox(width: 4),
-                        Text(
-                          '${_formatTime(classItem.startTime)} - ${_formatTime(classItem.endTime)}',
-                          style: GoogleFonts.albertSans(fontSize: 13, color: Colors.grey[600]),
+                        Flexible(
+                          child: Text(
+                            '${_formatTime(classItem.startTime)} - ${_formatTime(classItem.endTime)}',
+                            style: GoogleFonts.inter(
+                                fontSize: 13, color: Colors.grey[600]),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        Icon(Icons.calendar_today, size: 14, color: Colors.grey[600]),
+                        Icon(Icons.calendar_today,
+                            size: 14, color: Colors.grey[600]),
                         const SizedBox(width: 4),
-                        Text(
-                          _formatDays(classItem.daysOfWeek),
-                          style: GoogleFonts.albertSans(fontSize: 12, color: Colors.grey[500]),
+                        Flexible(
+                          child: Text(
+                            _formatDays(classItem.daysOfWeek),
+                            style: GoogleFonts.inter(
+                                fontSize: 12, color: Colors.grey[500]),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),
@@ -265,9 +283,13 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
                         children: [
                           Icon(Icons.person, size: 14, color: Colors.grey[600]),
                           const SizedBox(width: 4),
-                          Text(
-                            classItem.facultyName!,
-                            style: GoogleFonts.albertSans(fontSize: 12, color: Colors.grey[500]),
+                          Flexible(
+                            child: Text(
+                              classItem.facultyName!,
+                              style: GoogleFonts.inter(
+                                  fontSize: 12, color: Colors.grey[500]),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
@@ -276,15 +298,26 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
                 ),
               ),
               if (classItem.campusLocation != null)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Icon(Icons.location_on, size: 16, color: Colors.grey[400]),
-                    Text(
-                      classItem.campusLocation!.room ?? classItem.campusLocation!.name,
-                      style: GoogleFonts.albertSans(fontSize: 11, color: Colors.grey[500]),
+                Flexible(
+                  flex: 0,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 80),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Icon(Icons.location_on,
+                            size: 16, color: Colors.grey[400]),
+                        Text(
+                          classItem.campusLocation!.room ??
+                              classItem.campusLocation!.name,
+                          style: GoogleFonts.inter(
+                              fontSize: 11, color: Colors.grey[500]),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
             ],
           ),
@@ -309,7 +342,8 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
             focusedDay: _focusedDay,
             selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
             calendarFormat: _calendarFormat,
-            onFormatChanged: (format) => setState(() => _calendarFormat = format),
+            onFormatChanged: (format) =>
+                setState(() => _calendarFormat = format),
             onDaySelected: (selectedDay, focusedDay) {
               setState(() {
                 _selectedDay = selectedDay;
@@ -320,14 +354,16 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
               titleCentered: true,
               formatButtonVisible: true,
               formatButtonDecoration: BoxDecoration(
-                border: Border.all(color: const Color(0xFF2196F3)),
+                border: Border.all(color: AppColors.primary),
                 borderRadius: BorderRadius.circular(8),
               ),
-              formatButtonTextStyle: const TextStyle(color: Color(0xFF2196F3)),
+              formatButtonTextStyle: const TextStyle(color: AppColors.primary),
             ),
             calendarStyle: const CalendarStyle(
-              selectedDecoration: BoxDecoration(color: Color(0xFF2196F3), shape: BoxShape.circle),
-              todayDecoration: BoxDecoration(color: Color(0xFF90CAF9), shape: BoxShape.circle),
+              selectedDecoration: BoxDecoration(
+                  color: AppColors.primary, shape: BoxShape.circle),
+              todayDecoration: BoxDecoration(
+                  color: Color(0xFF90CAF9), shape: BoxShape.circle),
             ),
           ),
         ),
@@ -338,12 +374,13 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
             children: [
               Text(
                 _formatDate(_selectedDay),
-                style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),
+                style: GoogleFonts.inter(
+                    fontSize: 18, fontWeight: FontWeight.w600),
               ),
               const Spacer(),
               Text(
                 '${schedulesForDay.length} events',
-                style: GoogleFonts.albertSans(color: Colors.grey[600]),
+                style: GoogleFonts.inter(color: Colors.grey[600]),
               ),
             ],
           ),
@@ -355,7 +392,8 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
               : ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: schedulesForDay.length,
-                  itemBuilder: (context, index) => _buildScheduleCard(schedulesForDay[index]),
+                  itemBuilder: (context, index) =>
+                      _buildScheduleCard(schedulesForDay[index]),
                 ),
         ),
       ],
@@ -369,7 +407,8 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
         children: [
           Icon(Icons.event_note, size: 60, color: Colors.grey[300]),
           const SizedBox(height: 16),
-          Text('No events scheduled', style: GoogleFonts.poppins(color: Colors.grey[600])),
+          Text('No events scheduled',
+              style: GoogleFonts.inter(color: Colors.grey[600])),
           const SizedBox(height: 8),
           ElevatedButton.icon(
             onPressed: () => Navigator.pushNamed(
@@ -393,7 +432,8 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(12)),
+        decoration: BoxDecoration(
+            color: Colors.red, borderRadius: BorderRadius.circular(12)),
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       confirmDismiss: (_) async {
@@ -403,22 +443,28 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
             title: const Text('Delete Event'),
             content: const Text('Are you sure?'),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel')),
               TextButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Delete', style: TextStyle(color: Colors.red)),
+                child:
+                    const Text('Delete', style: TextStyle(color: Colors.red)),
               ),
             ],
           ),
         );
       },
-      onDismissed: (_) => context.read<ScheduleProvider>().deleteSchedule(schedule.id),
+      onDismissed: (_) =>
+          context.read<ScheduleProvider>().deleteSchedule(schedule.id),
       child: Card(
         margin: const EdgeInsets.only(bottom: 12),
         elevation: 2,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: InkWell(
-          onTap: () => Navigator.pushNamed(context, AddEditScheduleScreen.routeName, arguments: schedule),
+          onTap: () => Navigator.pushNamed(
+              context, AddEditScheduleScreen.routeName,
+              arguments: schedule),
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.all(16),
@@ -431,8 +477,11 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(_formatTime(schedule.startTime), style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                    Text(_formatTime(schedule.endTime), style: GoogleFonts.albertSans(color: Colors.grey[600], fontSize: 13)),
+                    Text(_formatTime(schedule.startTime),
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                    Text(_formatTime(schedule.endTime),
+                        style: GoogleFonts.inter(
+                            color: Colors.grey[600], fontSize: 13)),
                   ],
                 ),
                 const SizedBox(width: 16),
@@ -442,17 +491,22 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
                     children: [
                       Text(
                         schedule.title,
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.inter(
                           fontWeight: FontWeight.w600,
-                          decoration: schedule.isCompleted ? TextDecoration.lineThrough : null,
+                          decoration: schedule.isCompleted
+                              ? TextDecoration.lineThrough
+                              : null,
                         ),
                       ),
                       if (schedule.location != null)
                         Row(
                           children: [
-                            Icon(Icons.location_on, size: 12, color: Colors.grey[500]),
+                            Icon(Icons.location_on,
+                                size: 12, color: Colors.grey[500]),
                             const SizedBox(width: 4),
-                            Text(schedule.location!, style: GoogleFonts.albertSans(fontSize: 12, color: Colors.grey[500])),
+                            Text(schedule.location!,
+                                style: GoogleFonts.inter(
+                                    fontSize: 12, color: Colors.grey[500])),
                           ],
                         ),
                     ],
@@ -460,8 +514,10 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
                 ),
                 Checkbox(
                   value: schedule.isCompleted,
-                  onChanged: (_) => context.read<ScheduleProvider>().toggleComplete(schedule.id),
-                  activeColor: const Color(0xFF2196F3),
+                  onChanged: (_) => context
+                      .read<ScheduleProvider>()
+                      .toggleComplete(schedule.id),
+                  activeColor: AppColors.primary,
                 ),
               ],
             ),
@@ -491,7 +547,9 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
                 decoration: InputDecoration(
                   hintText: 'Search faculty...',
                   prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none),
                   filled: true,
                   fillColor: Colors.grey[100],
                 ),
@@ -516,11 +574,22 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(
             children: [
-              _buildStatBadge(allFaculty.where((f) => f.status == FacultyStatus.onCampus).length, 'On Campus', Colors.green),
+              _buildStatBadge(
+                  allFaculty
+                      .where((f) => f.status == FacultyStatus.onCampus)
+                      .length,
+                  'On Campus',
+                  Colors.green),
               const SizedBox(width: 8),
-              _buildStatBadge(allFaculty.where((f) => f.status == FacultyStatus.enRoute).length, 'En Route', Colors.orange),
+              _buildStatBadge(
+                  allFaculty
+                      .where((f) => f.status == FacultyStatus.enRoute)
+                      .length,
+                  'En Route',
+                  Colors.orange),
               const Spacer(),
-              Text('${filteredFaculty.length} faculty', style: GoogleFonts.albertSans(color: Colors.grey[600])),
+              Text('${filteredFaculty.length} faculty',
+                  style: GoogleFonts.inter(color: Colors.grey[600])),
             ],
           ),
         ),
@@ -531,9 +600,11 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.person_search, size: 60, color: Colors.grey[300]),
+                      Icon(Icons.person_search,
+                          size: 60, color: Colors.grey[300]),
                       const SizedBox(height: 16),
-                      Text('No faculty found', style: GoogleFonts.poppins(color: Colors.grey[600])),
+                      Text('No faculty found',
+                          style: GoogleFonts.inter(color: Colors.grey[600])),
                     ],
                   ),
                 )
@@ -542,7 +613,8 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: filteredFaculty.length,
-                    itemBuilder: (context, index) => _buildFacultyCard(filteredFaculty[index]),
+                    itemBuilder: (context, index) =>
+                        _buildFacultyCard(filteredFaculty[index]),
                   ),
                 ),
         ),
@@ -550,11 +622,13 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
     );
   }
 
-  List<FacultyLocationModel> _filterFaculty(List<FacultyLocationModel> faculty) {
+  List<FacultyLocationModel> _filterFaculty(
+      List<FacultyLocationModel> faculty) {
     return faculty.where((f) {
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
-        if (!f.facultyName.toLowerCase().contains(query) && !(f.department?.toLowerCase().contains(query) ?? false)) {
+        if (!f.facultyName.toLowerCase().contains(query) &&
+            !(f.department?.toLowerCase().contains(query) ?? false)) {
           return false;
         }
       }
@@ -571,10 +645,10 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
         label: Text(label),
         selected: isSelected,
         onSelected: (_) => setState(() => _selectedStatus = status),
-        selectedColor: const Color(0xFF2196F3).withOpacity(0.2),
-        labelStyle: GoogleFonts.albertSans(
+        selectedColor: AppColors.primary.withOpacity(0.2),
+        labelStyle: GoogleFonts.inter(
           fontSize: 12,
-          color: isSelected ? const Color(0xFF2196F3) : Colors.grey[700],
+          color: isSelected ? AppColors.primary : Colors.grey[700],
         ),
       ),
     );
@@ -583,13 +657,20 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
   Widget _buildStatBadge(int count, String label, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
+      decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(16)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+          Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
           const SizedBox(width: 6),
-          Text('$count $label', style: GoogleFonts.albertSans(fontSize: 12, fontWeight: FontWeight.w600, color: color)),
+          Text('$count $label',
+              style: GoogleFonts.inter(
+                  fontSize: 12, fontWeight: FontWeight.w600, color: color)),
         ],
       ),
     );
@@ -611,10 +692,16 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
                 children: [
                   CircleAvatar(
                     radius: 24,
-                    backgroundColor: const Color(0xFF2196F3).withOpacity(0.1),
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
                     child: Text(
-                      faculty.facultyName.split(' ').map((n) => n[0]).take(2).join(),
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: const Color(0xFF2196F3)),
+                      faculty.facultyName
+                          .split(' ')
+                          .map((n) => n[0])
+                          .take(2)
+                          .join(),
+                      style: GoogleFonts.inter(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary),
                     ),
                   ),
                   Positioned(
@@ -637,14 +724,22 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(faculty.facultyName, style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                    Text(faculty.facultyName,
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
                     if (faculty.department != null)
-                      Text(faculty.department!, style: GoogleFonts.albertSans(fontSize: 13, color: Colors.grey[600])),
+                      Text(faculty.department!,
+                          style: GoogleFonts.inter(
+                              fontSize: 13, color: Colors.grey[600])),
                     Row(
                       children: [
-                        Icon(faculty.statusIcon, size: 14, color: faculty.statusColor),
+                        Icon(faculty.statusIcon,
+                            size: 14, color: faculty.statusColor),
                         const SizedBox(width: 4),
-                        Text(faculty.statusText, style: GoogleFonts.albertSans(fontSize: 13, fontWeight: FontWeight.w600, color: faculty.statusColor)),
+                        Text(faculty.statusText,
+                            style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: faculty.statusColor)),
                       ],
                     ),
                   ],
@@ -652,20 +747,32 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
               ),
               if (faculty.estimatedMinutes != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(color: Colors.orange.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8)),
                   child: Column(
                     children: [
-                      Text('~${faculty.estimatedMinutes}', style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.orange[700])),
-                      Text('min', style: GoogleFonts.albertSans(fontSize: 10, color: Colors.orange[700])),
+                      Text('~${faculty.estimatedMinutes}',
+                          style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.orange[700])),
+                      Text('min',
+                          style: GoogleFonts.inter(
+                              fontSize: 10, color: Colors.orange[700])),
                     ],
                   ),
                 )
               else if (faculty.status == FacultyStatus.onCampus)
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                  child: Icon(Icons.check_circle, color: Colors.green[700], size: 24),
+                  decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8)),
+                  child: Icon(Icons.check_circle,
+                      color: Colors.green[700], size: 24),
                 ),
             ],
           ),
@@ -678,7 +785,8 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.5,
         minChildSize: 0.3,
@@ -690,22 +798,42 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+              Center(
+                  child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          borderRadius: BorderRadius.circular(2)))),
               const SizedBox(height: 20),
               Row(
                 children: [
                   CircleAvatar(
                     radius: 30,
-                    backgroundColor: const Color(0xFF2196F3).withOpacity(0.1),
-                    child: Text(faculty.facultyName.split(' ').map((n) => n[0]).take(2).join(), style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w600, color: const Color(0xFF2196F3))),
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    child: Text(
+                        faculty.facultyName
+                            .split(' ')
+                            .map((n) => n[0])
+                            .take(2)
+                            .join(),
+                        style: GoogleFonts.inter(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary)),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(faculty.facultyName, style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600)),
-                        if (faculty.department != null) Text(faculty.department!, style: GoogleFonts.albertSans(color: Colors.grey[600])),
+                        Text(faculty.facultyName,
+                            style: GoogleFonts.inter(
+                                fontSize: 18, fontWeight: FontWeight.w600)),
+                        if (faculty.department != null)
+                          Text(faculty.department!,
+                              style:
+                                  GoogleFonts.inter(color: Colors.grey[600])),
                       ],
                     ),
                   ),
@@ -714,33 +842,54 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
               const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: faculty.statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(
+                    color: faculty.statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12)),
                 child: Row(
                   children: [
-                    Icon(faculty.statusIcon, color: faculty.statusColor, size: 28),
+                    Icon(faculty.statusIcon,
+                        color: faculty.statusColor, size: 28),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(faculty.statusText, style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: faculty.statusColor)),
-                          if (faculty.lastUpdated != null) Text('Updated ${_formatTimeAgo(faculty.lastUpdated!)}', style: GoogleFonts.albertSans(fontSize: 12, color: Colors.grey[600])),
+                          Text(faculty.statusText,
+                              style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: faculty.statusColor)),
+                          if (faculty.lastUpdated != null)
+                            Text(
+                                'Updated ${_formatTimeAgo(faculty.lastUpdated!)}',
+                                style: GoogleFonts.inter(
+                                    fontSize: 12, color: Colors.grey[600])),
                         ],
                       ),
                     ),
                     if (faculty.estimatedMinutes != null)
                       Column(
                         children: [
-                          Text('~${faculty.estimatedMinutes}', style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.w700, color: faculty.statusColor)),
-                          Text('min', style: GoogleFonts.albertSans(fontSize: 11, color: faculty.statusColor)),
+                          Text('~${faculty.estimatedMinutes}',
+                              style: GoogleFonts.inter(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                  color: faculty.statusColor)),
+                          Text('min',
+                              style: GoogleFonts.inter(
+                                  fontSize: 11, color: faculty.statusColor)),
                         ],
                       ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
-              if (faculty.officeLocation != null) _buildDetailRow(Icons.location_on, 'Office', faculty.officeLocation!),
-              if (faculty.officeHours != null) _buildDetailRow(Icons.access_time, 'Office Hours', faculty.officeHours!),
+              if (faculty.officeLocation != null)
+                _buildDetailRow(
+                    Icons.location_on, 'Office', faculty.officeLocation!),
+              if (faculty.officeHours != null)
+                _buildDetailRow(
+                    Icons.access_time, 'Office Hours', faculty.officeHours!),
             ],
           ),
         ),
@@ -758,8 +907,12 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: GoogleFonts.albertSans(fontSize: 12, color: Colors.grey[500])),
-              Text(value, style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500)),
+              Text(label,
+                  style:
+                      GoogleFonts.inter(fontSize: 12, color: Colors.grey[500])),
+              Text(value,
+                  style: GoogleFonts.inter(
+                      fontSize: 14, fontWeight: FontWeight.w500)),
             ],
           ),
         ],
@@ -778,27 +931,34 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
         // Status Card
         Card(
           elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
                 Icon(
-                  locationProvider.isSharing ? Icons.location_on : Icons.location_off,
+                  locationProvider.isSharing
+                      ? Icons.location_on
+                      : Icons.location_off,
                   size: 60,
-                  color: locationProvider.isSharing ? Colors.green : Colors.grey,
+                  color:
+                      locationProvider.isSharing ? Colors.green : Colors.grey,
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  locationProvider.isSharing ? 'Location Sharing Active' : 'Location Sharing Off',
-                  style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w600),
+                  locationProvider.isSharing
+                      ? 'Location Sharing Active'
+                      : 'Location Sharing Off',
+                  style: GoogleFonts.inter(
+                      fontSize: 20, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   locationProvider.isSharing
                       ? 'Students can see your proximity to campus'
                       : 'Your location is private',
-                  style: GoogleFonts.albertSans(color: Colors.grey[600]),
+                  style: GoogleFonts.inter(color: Colors.grey[600]),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 20),
@@ -806,10 +966,16 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () => locationProvider.toggleSharing(),
-                    icon: Icon(locationProvider.isSharing ? Icons.location_off : Icons.location_on),
-                    label: Text(locationProvider.isSharing ? 'Stop Sharing' : 'Start Sharing'),
+                    icon: Icon(locationProvider.isSharing
+                        ? Icons.location_off
+                        : Icons.location_on),
+                    label: Text(locationProvider.isSharing
+                        ? 'Stop Sharing'
+                        : 'Start Sharing'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: locationProvider.isSharing ? Colors.red : const Color(0xFF2196F3),
+                      backgroundColor: locationProvider.isSharing
+                          ? Colors.red
+                          : AppColors.primary,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
@@ -825,28 +991,40 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
         if (locationProvider.isSharing && position != null)
           Card(
             elevation: 2,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Current Status', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600)),
+                  Text('Current Status',
+                      style: GoogleFonts.inter(
+                          fontSize: 16, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                        child: const Icon(Icons.location_on, color: Colors.green, size: 28),
+                        decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12)),
+                        child: const Icon(Icons.location_on,
+                            color: Colors.green, size: 28),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Sharing Location', style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.green)),
-                            Text('Students can see your status', style: GoogleFonts.albertSans(fontSize: 13, color: Colors.grey[600])),
+                            Text('Sharing Location',
+                                style: GoogleFonts.inter(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.green)),
+                            Text('Students can see your status',
+                                style: GoogleFonts.inter(
+                                    fontSize: 13, color: Colors.grey[600])),
                           ],
                         ),
                       ),
@@ -861,7 +1039,8 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
           Card(
             elevation: 2,
             color: Colors.orange[50],
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -872,12 +1051,19 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Permission Required', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.orange[900])),
-                        Text('Enable location access to share', style: GoogleFonts.albertSans(fontSize: 12, color: Colors.orange[800])),
+                        Text('Permission Required',
+                            style: GoogleFonts.inter(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.orange[900])),
+                        Text('Enable location access to share',
+                            style: GoogleFonts.inter(
+                                fontSize: 12, color: Colors.orange[800])),
                       ],
                     ),
                   ),
-                  TextButton(onPressed: () => locationProvider.requestPermission(), child: const Text('Enable')),
+                  TextButton(
+                      onPressed: () => locationProvider.requestPermission(),
+                      child: const Text('Enable')),
                 ],
               ),
             ),
@@ -889,7 +1075,8 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
         Card(
           elevation: 1,
           color: Colors.blue[50],
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -899,15 +1086,21 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
                   children: [
                     Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
                     const SizedBox(width: 8),
-                    Text('How it works', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: Colors.blue[900])),
+                    Text('How it works',
+                        style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue[900])),
                   ],
                 ),
                 const SizedBox(height: 12),
-                _buildInfoItem(Icons.visibility, 'Students see your status', 'On Campus, Nearby, En Route, or Away'),
+                _buildInfoItem(Icons.visibility, 'Students see your status',
+                    'On Campus, Nearby, En Route, or Away'),
                 const SizedBox(height: 8),
-                _buildInfoItem(Icons.timer, 'Estimated arrival', 'Shown when en route to campus'),
+                _buildInfoItem(Icons.timer, 'Estimated arrival',
+                    'Shown when en route to campus'),
                 const SizedBox(height: 8),
-                _buildInfoItem(Icons.security, 'Privacy protected', 'Only proximity shared, not exact location'),
+                _buildInfoItem(Icons.security, 'Privacy protected',
+                    'Only proximity shared, not exact location'),
               ],
             ),
           ),
@@ -926,8 +1119,14 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: GoogleFonts.albertSans(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.blue[900])),
-              Text(subtitle, style: GoogleFonts.albertSans(fontSize: 12, color: Colors.blue[700])),
+              Text(title,
+                  style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blue[900])),
+              Text(subtitle,
+                  style:
+                      GoogleFonts.inter(fontSize: 12, color: Colors.blue[700])),
             ],
           ),
         ),
@@ -950,10 +1149,26 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
 
   String _formatDate(DateTime date) {
     final now = DateTime.now();
-    if (date.year == now.year && date.month == now.month && date.day == now.day) return 'Today';
+    if (date.year == now.year && date.month == now.month && date.day == now.day)
+      return 'Today';
     final tomorrow = now.add(const Duration(days: 1));
-    if (date.year == tomorrow.year && date.month == tomorrow.month && date.day == tomorrow.day) return 'Tomorrow';
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    if (date.year == tomorrow.year &&
+        date.month == tomorrow.month &&
+        date.day == tomorrow.day) return 'Tomorrow';
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return '${days[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}';
   }

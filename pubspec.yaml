@@ -1,5 +1,5 @@
 name: smart_scheduler
-description: Smart Scheduler with Google Calendar integration (frontend-only MVP)
+description: EduSync - Smart class scheduler for students and faculty with notifications
 version: 0.1.0+1
 publish_to: 'none'
 
@@ -10,11 +10,8 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Google Calendar Integration
+  # Google Sign-In (for authentication)
   google_sign_in: ^6.2.1
-  googleapis: ^13.2.0
-  googleapis_auth: ^1.6.0
-  extension_google_sign_in_as_googleapis_auth: ^2.0.12
 
   # Local Storage & Security
   sqflite: ^2.3.0
@@ -64,6 +61,16 @@ dependencies:
   # Maps (OpenStreetMap - free, no API key needed)
   flutter_map: ^6.1.0
   latlong2: ^0.9.0
+
+dev_dependencies:
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo.png"
+  adaptive_icon_background: "#1565C0"
+  adaptive_icon_foreground: "assets/logo.png"
 
 flutter:
   uses-material-design: true

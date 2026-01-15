@@ -375,7 +375,7 @@ class AttendanceProvider extends ChangeNotifier {
 
       if (isCheckedIn) {
         // Parse status
-        final statusStr = attendanceData!['status'] as String?;
+        final statusStr = attendanceData['status'] as String?;
 
         final todayStatus = statusStr != null
             ? AttendanceStatus.values.firstWhere(

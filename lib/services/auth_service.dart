@@ -8,7 +8,7 @@ import '../models/user.dart';
 class AuthService {
   AuthService(this._storage, {GoogleSignIn? googleSignIn})
       : _googleSignIn = googleSignIn ?? GoogleSignIn();
-  
+
   final FlutterSecureStorage _storage;
   final GoogleSignIn _googleSignIn;
 
@@ -31,11 +31,15 @@ class AuthService {
   }
 
   /// Login with email and password
-  Future<UserModel?> login(String email, String password,
+  /// Returns a Map with 'user' or 'error' and 'errorType'
+  Future<Map<String, dynamic>> login(String email, String password,
       {required UserType role, bool remember = false}) async {
     // Check internet connection first
     if (!await _isOnline()) {
-      throw Exception('Internet connection required to login');
+      return {
+        'error': 'Internet connection required to login',
+        'errorType': 'network'
+      };
     }
 
     try {
@@ -44,7 +48,9 @@ class AuthService {
         password: password,
       );
 
-      if (credential.user == null) return null;
+      if (credential.user == null) {
+        return {'error': 'Login failed', 'errorType': 'unknown'};
+      }
 
       // Get user data from Firestore
       final userDoc =
@@ -53,7 +59,7 @@ class AuthService {
       if (!userDoc.exists) {
         // User exists in Auth but not in Firestore - sign out
         await _auth.signOut();
-        return null;
+        return {'error': 'Account not found', 'errorType': 'not_found'};
       }
 
       final userData = userDoc.data()!;
@@ -64,7 +70,14 @@ class AuthService {
       // Check if role matches
       if (userType != role) {
         await _auth.signOut();
-        return null;
+        final actualRole = userType == UserType.faculty ? 'Faculty' : 'Student';
+        final attemptedRole = role == UserType.faculty ? 'Faculty' : 'Student';
+        return {
+          'error':
+              'This account is registered as $actualRole. Please use the $actualRole login instead.',
+          'errorType': 'role_mismatch',
+          'actualRole': userType,
+        };
       }
 
       final user = _userFromFirestore(credential.user!.uid, userData);
@@ -73,11 +86,68 @@ class AuthService {
       await _storage.write(key: _keySession, value: credential.user!.uid);
       await _storage.write(key: _keyUserType, value: role.name);
 
-      return user;
+      return {'user': user};
     } on FirebaseAuthException catch (e) {
       print('Login error: ${e.message}');
-      return null;
+      if (e.code == 'user-not-found') {
+        return {
+          'error': 'No account found with this email',
+          'errorType': 'not_found'
+        };
+      } else if (e.code == 'wrong-password') {
+        return {'error': 'Incorrect password', 'errorType': 'wrong_password'};
+      } else if (e.code == 'invalid-email') {
+        return {'error': 'Invalid email address', 'errorType': 'invalid_email'};
+      } else if (e.code == 'user-disabled') {
+        return {
+          'error': 'This account has been disabled',
+          'errorType': 'disabled'
+        };
+      }
+      return {'error': e.message ?? 'Login failed', 'errorType': 'auth_error'};
+    } catch (e) {
+      return {'error': 'Login failed: $e', 'errorType': 'unknown'};
     }
+  }
+
+  /// Check if email already exists in Firestore and return role info
+  Future<Map<String, dynamic>> checkEmailStatus(String email) async {
+    if (!await _isOnline()) {
+      throw Exception('Internet connection required to check email');
+    }
+
+    try {
+      final existingUser = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+
+      if (existingUser.docs.isEmpty) {
+        return {'exists': false};
+      }
+
+      final userData = existingUser.docs.first.data();
+      final userType = userData['userType'] == 'faculty'
+          ? UserType.faculty
+          : UserType.student;
+      final isGoogleUser = userData['googleAccountEmail'] != null;
+
+      return {
+        'exists': true,
+        'userType': userType,
+        'isGoogleUser': isGoogleUser,
+      };
+    } catch (e) {
+      print('Error checking email: $e');
+      rethrow;
+    }
+  }
+
+  /// Check if email already exists in Firestore
+  Future<bool> isEmailInUse(String email) async {
+    final result = await checkEmailStatus(email);
+    return result['exists'] as bool;
   }
 
   /// Sign up with email and password
@@ -86,9 +156,8 @@ class AuthService {
     required String password,
     required String fullName,
     required UserType userType,
-    String? studentId,
-    String? facultyId,
-    String? department,
+    String? gender,
+    DateTime? dateOfBirth,
   }) async {
     // Check internet connection first
     if (!await _isOnline()) {
@@ -96,6 +165,17 @@ class AuthService {
     }
 
     try {
+      // Check if email is already in use in Firestore
+      final existingUser = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+
+      if (existingUser.docs.isNotEmpty) {
+        throw Exception('This email is already associated with an account');
+      }
+
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -109,10 +189,8 @@ class AuthService {
         'email': email,
         'fullName': fullName,
         'userType': userType.name,
-        'studentId': studentId,
-        'facultyId': facultyId,
-        'department': department,
-        'isGoogleCalendarConnected': false,
+        'gender': gender,
+        'dateOfBirth': dateOfBirth?.toIso8601String(),
         'createdAt': FieldValue.serverTimestamp(),
       };
 
@@ -126,10 +204,8 @@ class AuthService {
         email: email,
         fullName: fullName,
         userType: userType,
-        studentId: studentId,
-        facultyId: facultyId,
-        department: department,
-        isGoogleCalendarConnected: false,
+        gender: gender,
+        dateOfBirth: dateOfBirth,
       );
 
       // Save session locally
@@ -230,8 +306,6 @@ class AuthService {
           email: userCredential.user!.email ?? '',
           fullName: userCredential.user!.displayName ?? 'User',
           userType: role,
-          googleAccountEmail: userCredential.user!.email,
-          isGoogleCalendarConnected: true,
         );
 
         await _storage.write(key: _keySession, value: userCredential.user!.uid);
@@ -286,12 +360,68 @@ class AuthService {
     try {
       // Update in Firestore
       await _firestore.collection('users').doc(user.id).update({
-        'googleAccountEmail': user.googleAccountEmail,
-        'isGoogleCalendarConnected': user.isGoogleCalendarConnected,
+        'fullName': user.fullName,
+        'email': user.email,
+        'department': user.department,
+        'gender': user.gender,
+        'dateOfBirth': user.dateOfBirth?.toIso8601String(),
       });
     } catch (e) {
       print('Error updating user: $e');
-      // Continue even if Firestore update fails - user data is in memory
+      rethrow;
+    }
+  }
+
+  /// Update email for manual sign-up users
+  Future<void> updateEmail(String newEmail) async {
+    if (!await _isOnline()) {
+      throw Exception('Internet connection required to update email');
+    }
+
+    try {
+      final firebaseUser = _auth.currentUser;
+      if (firebaseUser == null) {
+        throw Exception('No user logged in');
+      }
+
+      // Update email in Firebase Auth
+      await firebaseUser.verifyBeforeUpdateEmail(newEmail);
+    } catch (e) {
+      print('Error updating email: $e');
+      rethrow;
+    }
+  }
+
+  /// Change password for manual sign-up users
+  Future<void> changePassword(
+      String currentPassword, String newPassword) async {
+    if (!await _isOnline()) {
+      throw Exception('Internet connection required to change password');
+    }
+
+    try {
+      final firebaseUser = _auth.currentUser;
+      if (firebaseUser == null || firebaseUser.email == null) {
+        throw Exception('No user logged in');
+      }
+
+      // Re-authenticate user before changing password
+      final credential = EmailAuthProvider.credential(
+        email: firebaseUser.email!,
+        password: currentPassword,
+      );
+      await firebaseUser.reauthenticateWithCredential(credential);
+
+      // Update password
+      await firebaseUser.updatePassword(newPassword);
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'wrong-password') {
+        throw Exception('Current password is incorrect');
+      }
+      throw Exception('Failed to change password: ${e.message}');
+    } catch (e) {
+      print('Error changing password: $e');
+      rethrow;
     }
   }
 
@@ -306,8 +436,11 @@ class AuthService {
       studentId: data['studentId'],
       facultyId: data['facultyId'],
       department: data['department'],
-      googleAccountEmail: data['googleAccountEmail'],
-      isGoogleCalendarConnected: data['isGoogleCalendarConnected'] ?? false,
+      gender: data['gender'],
+      dateOfBirth: data['dateOfBirth'] != null
+          ? DateTime.tryParse(data['dateOfBirth'] as String)
+          : null,
+      isGoogleUser: data['googleAccountEmail'] != null,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }

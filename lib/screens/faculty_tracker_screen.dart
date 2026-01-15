@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/location.dart';
 import '../providers/location_provider.dart';
+import '../theme/app_theme.dart';
 
 class FacultyTrackerScreen extends StatefulWidget {
   const FacultyTrackerScreen({super.key});
@@ -72,9 +73,9 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
       appBar: AppBar(
         title: Text(
           'Faculty Tracker',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
         ),
-        backgroundColor: const Color(0xFF2196F3),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -150,7 +151,7 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
                 const Spacer(),
                 Text(
                   '${filteredFaculty.length} faculty',
-                  style: GoogleFonts.albertSans(
+                  style: GoogleFonts.inter(
                     color: Colors.grey[600],
                     fontSize: 14,
                   ),
@@ -193,15 +194,15 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
-          hint: Text(hint, style: GoogleFonts.albertSans(fontSize: 14)),
+          hint: Text(hint, style: GoogleFonts.inter(fontSize: 14)),
           items: [
             DropdownMenuItem<String>(
               value: null,
-              child: Text('All $hint', style: GoogleFonts.albertSans(fontSize: 14)),
+              child: Text('All $hint', style: GoogleFonts.inter(fontSize: 14)),
             ),
             ...items.map((item) => DropdownMenuItem<String>(
                   value: item,
-                  child: Text(item, style: GoogleFonts.albertSans(fontSize: 14)),
+                  child: Text(item, style: GoogleFonts.inter(fontSize: 14)),
                 )),
           ],
           onChanged: onChanged,
@@ -218,11 +219,11 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
         label: Text(label),
         selected: isSelected,
         onSelected: (_) => setState(() => _selectedStatus = status),
-        selectedColor: const Color(0xFF2196F3).withOpacity(0.2),
-        checkmarkColor: const Color(0xFF2196F3),
-        labelStyle: GoogleFonts.albertSans(
+        selectedColor: AppColors.primary.withOpacity(0.2),
+        checkmarkColor: AppColors.primary,
+        labelStyle: GoogleFonts.inter(
           fontSize: 12,
-          color: isSelected ? const Color(0xFF2196F3) : Colors.grey[700],
+          color: isSelected ? AppColors.primary : Colors.grey[700],
         ),
       ),
     );
@@ -249,7 +250,7 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
           const SizedBox(width: 6),
           Text(
             '$count $label',
-            style: GoogleFonts.albertSans(
+            style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: color,
@@ -269,7 +270,7 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
           const SizedBox(height: 16),
           Text(
             'No faculty found',
-            style: GoogleFonts.poppins(
+            style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.w500,
               color: Colors.grey[600],
@@ -278,7 +279,7 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
           const SizedBox(height: 8),
           Text(
             'Try adjusting your filters',
-            style: GoogleFonts.albertSans(
+            style: GoogleFonts.inter(
               fontSize: 14,
               color: Colors.grey[500],
             ),
@@ -305,13 +306,13 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
                 children: [
                   CircleAvatar(
                     radius: 28,
-                    backgroundColor: const Color(0xFF2196F3).withOpacity(0.1),
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
                     child: Text(
                       faculty.facultyName.split(' ').map((n) => n[0]).take(2).join(),
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.inter(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF2196F3),
+                        color: AppColors.primary,
                       ),
                     ),
                   ),
@@ -338,7 +339,7 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
                   children: [
                     Text(
                       faculty.facultyName,
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -346,7 +347,7 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
                     if (faculty.department != null)
                       Text(
                         faculty.department!,
-                        style: GoogleFonts.albertSans(
+                        style: GoogleFonts.inter(
                           fontSize: 13,
                           color: Colors.grey[600],
                         ),
@@ -358,7 +359,7 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
                         const SizedBox(width: 4),
                         Text(
                           faculty.statusText,
-                          style: GoogleFonts.albertSans(
+                          style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: faculty.statusColor,
@@ -369,7 +370,7 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
                           const SizedBox(width: 8),
                           Text(
                             '• ${_formatDistance(faculty.distanceMeters!)}',
-                            style: GoogleFonts.albertSans(
+                            style: GoogleFonts.inter(
                               fontSize: 12,
                               color: Colors.grey[500],
                             ),
@@ -392,7 +393,7 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
                     children: [
                       Text(
                         '~${faculty.estimatedMinutes}',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.inter(
                           fontSize: 20,
                           fontWeight: FontWeight.w700,
                           color: Colors.orange[700],
@@ -400,7 +401,7 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
                       ),
                       Text(
                         'min',
-                        style: GoogleFonts.albertSans(
+                        style: GoogleFonts.inter(
                           fontSize: 11,
                           color: Colors.orange[700],
                         ),
@@ -463,13 +464,13 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
                 children: [
                   CircleAvatar(
                     radius: 35,
-                    backgroundColor: const Color(0xFF2196F3).withOpacity(0.1),
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
                     child: Text(
                       faculty.facultyName.split(' ').map((n) => n[0]).take(2).join(),
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.inter(
                         fontSize: 24,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF2196F3),
+                        color: AppColors.primary,
                       ),
                     ),
                   ),
@@ -480,7 +481,7 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
                       children: [
                         Text(
                           faculty.facultyName,
-                          style: GoogleFonts.poppins(
+                          style: GoogleFonts.inter(
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
                           ),
@@ -488,7 +489,7 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
                         if (faculty.department != null)
                           Text(
                             faculty.department!,
-                            style: GoogleFonts.albertSans(
+                            style: GoogleFonts.inter(
                               fontSize: 14,
                               color: Colors.grey[600],
                             ),
@@ -516,7 +517,7 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
                         children: [
                           Text(
                             faculty.statusText,
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.inter(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
                               color: faculty.statusColor,
@@ -525,7 +526,7 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
                           if (faculty.lastUpdated != null)
                             Text(
                               'Updated ${_formatTimeAgo(faculty.lastUpdated!)}',
-                              style: GoogleFonts.albertSans(
+                              style: GoogleFonts.inter(
                                 fontSize: 12,
                                 color: Colors.grey[600],
                               ),
@@ -538,7 +539,7 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
                         children: [
                           Text(
                             '~${faculty.estimatedMinutes}',
-                            style: GoogleFonts.poppins(
+                            style: GoogleFonts.inter(
                               fontSize: 28,
                               fontWeight: FontWeight.w700,
                               color: faculty.statusColor,
@@ -546,7 +547,7 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
                           ),
                           Text(
                             'minutes',
-                            style: GoogleFonts.albertSans(
+                            style: GoogleFonts.inter(
                               fontSize: 12,
                               color: faculty.statusColor,
                             ),
@@ -589,14 +590,14 @@ class _FacultyTrackerScreenState extends State<FacultyTrackerScreen> {
           children: [
             Text(
               label,
-              style: GoogleFonts.albertSans(
+              style: GoogleFonts.inter(
                 fontSize: 12,
                 color: Colors.grey[500],
               ),
             ),
             Text(
               value,
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),

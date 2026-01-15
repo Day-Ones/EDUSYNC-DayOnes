@@ -7,10 +7,13 @@ import '../providers/auth_provider.dart';
 import '../providers/class_provider.dart';
 import '../providers/schedule_provider.dart';
 import '../providers/location_provider.dart';
+import '../services/firebase_service.dart';
+import '../theme/app_theme.dart';
 import '../widgets/loading_overlay.dart';
 import 'profile_screen.dart';
 import 'classes_screen.dart';
 import 'class_details_screen.dart';
+import 'schedule_notifications_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -21,6 +24,9 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  final FirebaseService _firebaseService = FirebaseService();
+  int _unreadNotifications = 0;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -30,10 +36,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final locationProvider = context.read<LocationProvider>();
     final user = auth.user;
     if (user != null) {
-      classProvider.loadForUser(user.id, isStudent: user.userType == UserType.student);
+      classProvider.loadForUser(user.id,
+          isStudent: user.userType == UserType.student);
       scheduleProvider.loadForUser(user.id);
       locationProvider.initialize(user.id, user.userType);
-      
+
       // Update faculty info if user is faculty
       if (user.userType == UserType.faculty) {
         locationProvider.updateFacultyInfo(
@@ -42,7 +49,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           department: user.department,
           email: user.email,
         );
+        // Load unread notification count for faculty
+        _loadUnreadNotifications(user.id);
       }
+    }
+  }
+
+  Future<void> _loadUnreadNotifications(String facultyId) async {
+    final count = await _firebaseService.getUnreadNotificationCount(facultyId);
+    if (mounted) {
+      setState(() => _unreadNotifications = count);
     }
   }
 
@@ -65,7 +81,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     final allClasses = [...classes, ...enrolledClasses];
-    final todayClasses = allClasses.where((c) => c.daysOfWeek.contains(DateTime.now().weekday)).toList();
+    final todayClasses = allClasses
+        .where((c) => c.daysOfWeek.contains(DateTime.now().weekday))
+        .toList();
     final upcomingClasses = _getUpcomingClasses(todayClasses);
     final todaySchedules = scheduleProvider.getTodaySchedules();
     final upcomingSchedules = scheduleProvider.getUpcomingSchedules();
@@ -78,37 +96,108 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(24, 50, 24, 30),
-            decoration: const BoxDecoration(color: Color(0xFF2196F3)),
+            decoration: const BoxDecoration(color: AppColors.primary),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Notification icon for faculty
+                if (user.userType == UserType.faculty)
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: GestureDetector(
+                      onTap: () async {
+                        await Navigator.pushNamed(
+                          context,
+                          ScheduleNotificationsScreen.routeName,
+                        );
+                        // Refresh notification count when returning
+                        _loadUnreadNotifications(user.id);
+                      },
+                      child: Stack(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.notifications_outlined,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                          if (_unreadNotifications > 0)
+                            Positioned(
+                              right: 0,
+                              top: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(
+                                  _unreadNotifications > 9
+                                      ? '9+'
+                                      : '$_unreadNotifications',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
                 Text(
                   'Welcome back,',
-                  style: GoogleFonts.albertSans(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w400),
+                  style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w400),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   user.fullName.isNotEmpty ? user.fullName : 'User',
-                  style: GoogleFonts.poppins(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w700),
+                  style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 36,
+                      fontWeight: FontWeight.w700),
                 ),
               ],
             ),
           ),
-          
+
           // Stats Cards
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Expanded(child: _buildStatCard(Icons.class_, const Color(0xFF64B5F6), allClasses.length.toString(), 'Classes')),
+                Expanded(
+                    child: _buildStatCard(Icons.class_, const Color(0xFF64B5F6),
+                        allClasses.length.toString(), 'Classes')),
                 const SizedBox(width: 12),
-                Expanded(child: _buildStatCard(Icons.event_note, const Color(0xFF81C784), todaySchedules.length.toString(), 'Events')),
+                Expanded(
+                    child: _buildStatCard(
+                        Icons.event_note,
+                        const Color(0xFF81C784),
+                        todaySchedules.length.toString(),
+                        'Events')),
                 const SizedBox(width: 12),
-                Expanded(child: _buildStatCard(Icons.access_time, const Color(0xFFE57373), (upcomingClasses + upcomingSchedules.length).toString(), 'Upcoming')),
+                Expanded(
+                    child: _buildStatCard(
+                        Icons.access_time,
+                        const Color(0xFFE57373),
+                        (upcomingClasses + upcomingSchedules.length).toString(),
+                        'Upcoming')),
               ],
             ),
           ),
-          
+
           // Today's Classes Section
           Expanded(
             child: Column(
@@ -119,10 +208,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text("Today's Classes", style: GoogleFonts.poppins(fontSize: 22, fontWeight: FontWeight.w700)),
+                      Text("Today's Classes",
+                          style: GoogleFonts.inter(
+                              fontSize: 22, fontWeight: FontWeight.w700)),
                       TextButton(
-                        onPressed: () => Navigator.pushNamed(context, ClassesScreen.routeName),
-                        child: Text('See All', style: GoogleFonts.albertSans(color: const Color(0xFF2196F3), fontSize: 16)),
+                        onPressed: () => Navigator.pushNamed(
+                            context, ClassesScreen.routeName),
+                        child: Text('See All',
+                            style: GoogleFonts.inter(
+                                color: AppColors.primary, fontSize: 16)),
                       ),
                     ],
                   ),
@@ -130,13 +224,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Expanded(
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(color: const Color(0xFFE0E0E0), borderRadius: BorderRadius.circular(8)),
+                    decoration: BoxDecoration(
+                        color: const Color(0xFFE0E0E0),
+                        borderRadius: BorderRadius.circular(8)),
                     child: todayClasses.isEmpty
                         ? _buildEmptyClassesState()
                         : ListView.builder(
                             padding: const EdgeInsets.all(8),
                             itemCount: todayClasses.length,
-                            itemBuilder: (context, index) => _buildClassTile(todayClasses[index], enrolledClasses),
+                            itemBuilder: (context, index) => _buildClassTile(
+                                todayClasses[index], enrolledClasses),
                           ),
                   ),
                 ),
@@ -154,7 +251,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           if (index == 2) Navigator.pushNamed(context, ProfileScreen.routeName);
         },
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF2196F3),
+        selectedItemColor: AppColors.primary,
         unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
@@ -172,10 +269,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           Icon(Icons.event_busy, size: 48, color: Colors.grey[400]),
           const SizedBox(height: 8),
-          Text('No classes today', style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+          Text('No classes today',
+              style: TextStyle(color: Colors.grey[600], fontSize: 16)),
           const SizedBox(height: 8),
           TextButton(
-            onPressed: () => Navigator.pushNamed(context, ClassesScreen.routeName),
+            onPressed: () =>
+                Navigator.pushNamed(context, ClassesScreen.routeName),
             child: const Text('View all classes'),
           ),
         ],
@@ -183,49 +282,70 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildClassTile(ClassModel classItem, List<ClassModel> enrolledClasses) {
+  Widget _buildClassTile(
+      ClassModel classItem, List<ClassModel> enrolledClasses) {
     final isEnrolled = enrolledClasses.any((c) => c.id == classItem.id);
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        onTap: () => Navigator.pushNamed(context, ClassDetailsScreen.routeName, arguments: classItem),
+        onTap: () => Navigator.pushNamed(context, ClassDetailsScreen.routeName,
+            arguments: classItem),
         leading: CircleAvatar(
           backgroundColor: classItem.color,
           child: const Icon(Icons.book, color: Colors.white, size: 20),
         ),
-        title: Text(classItem.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text('${_formatTime(classItem.startTime)} - ${_formatTime(classItem.endTime)}'),
+        title: Text(classItem.name,
+            style: const TextStyle(fontWeight: FontWeight.bold)),
+        subtitle: Text(
+            '${_formatTime(classItem.startTime)} - ${_formatTime(classItem.endTime)}'),
         trailing: isEnrolled
             ? Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
-                child: Text('Enrolled', style: GoogleFonts.albertSans(fontSize: 10, color: Colors.green, fontWeight: FontWeight.w600)),
+                decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4)),
+                child: Text('Enrolled',
+                    style: GoogleFonts.inter(
+                        fontSize: 10,
+                        color: Colors.green,
+                        fontWeight: FontWeight.w600)),
               )
             : classItem.campusLocation != null
-                ? Text(classItem.campusLocation!.room ?? '', style: TextStyle(fontSize: 11, color: Colors.grey[600]))
+                ? Text(classItem.campusLocation!.room ?? '',
+                    style: TextStyle(fontSize: 11, color: Colors.grey[600]))
                 : null,
       ),
     );
   }
 
-  Widget _buildStatCard(IconData icon, Color iconColor, String value, String label) {
+  Widget _buildStatCard(
+      IconData icon, Color iconColor, String value, String label) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2))
+        ],
       ),
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: iconColor.withOpacity(0.2), shape: BoxShape.circle),
+            decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.2), shape: BoxShape.circle),
             child: Icon(icon, color: iconColor, size: 24),
           ),
           const SizedBox(height: 8),
-          Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          Text(label, style: GoogleFonts.albertSans(fontSize: 13, color: Colors.grey)),
+          Text(value,
+              style:
+                  const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          Text(label,
+              style: GoogleFonts.inter(fontSize: 13, color: Colors.grey)),
         ],
       ),
     );
@@ -233,7 +353,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   int _getUpcomingClasses(List<ClassModel> todays) {
     final now = TimeOfDay.now();
-    return todays.where((c) => (c.startTime.hour * 60 + c.startTime.minute) > (now.hour * 60 + now.minute)).length;
+    return todays
+        .where((c) =>
+            (c.startTime.hour * 60 + c.startTime.minute) >
+            (now.hour * 60 + now.minute))
+        .length;
   }
 
   String _formatTime(TimeOfDay t) {

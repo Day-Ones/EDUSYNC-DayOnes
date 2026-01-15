@@ -1,4 +1,4 @@
-﻿enum UserType { student, faculty }
+enum UserType { student, faculty }
 
 class UserModel {
   UserModel({
@@ -9,8 +9,9 @@ class UserModel {
     this.studentId,
     this.facultyId,
     this.department,
-    this.googleAccountEmail,
-    this.isGoogleCalendarConnected = false,
+    this.gender,
+    this.dateOfBirth,
+    this.isGoogleUser = false,
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -21,8 +22,9 @@ class UserModel {
   final String? studentId;
   final String? facultyId;
   final String? department;
-  final String? googleAccountEmail;
-  final bool isGoogleCalendarConnected;
+  final String? gender;
+  final DateTime? dateOfBirth;
+  final bool isGoogleUser;
   final DateTime createdAt;
 
   UserModel copyWith({
@@ -32,8 +34,9 @@ class UserModel {
     String? studentId,
     String? facultyId,
     String? department,
-    String? googleAccountEmail,
-    bool? isGoogleCalendarConnected,
+    String? gender,
+    DateTime? dateOfBirth,
+    bool? isGoogleUser,
   }) {
     return UserModel(
       id: id,
@@ -43,40 +46,49 @@ class UserModel {
       studentId: studentId ?? this.studentId,
       facultyId: facultyId ?? this.facultyId,
       department: department ?? this.department,
-      googleAccountEmail: googleAccountEmail ?? this.googleAccountEmail,
-      isGoogleCalendarConnected: isGoogleCalendarConnected ?? this.isGoogleCalendarConnected,
+      gender: gender ?? this.gender,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      isGoogleUser: isGoogleUser ?? this.isGoogleUser,
       createdAt: createdAt,
     );
   }
 
   Map<String, dynamic> toMap() => {
-    'id': id,
-    'email': email,
-    'fullName': fullName,
-    'userType': userType.name,
-    'studentId': studentId,
-    'facultyId': facultyId,
-    'department': department,
-    'googleAccountEmail': googleAccountEmail,
-    'isGoogleCalendarConnected': isGoogleCalendarConnected,
-    'createdAt': createdAt.toIso8601String(),
-  };
+        'id': id,
+        'email': email,
+        'fullName': fullName,
+        'userType': userType.name,
+        'studentId': studentId,
+        'facultyId': facultyId,
+        'department': department,
+        'gender': gender,
+        'dateOfBirth': dateOfBirth?.toIso8601String(),
+        'isGoogleUser': isGoogleUser,
+        'createdAt': createdAt.toIso8601String(),
+      };
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
     return UserModel(
       id: map['id'] as String,
       email: map['email'] as String,
       fullName: map['fullName'] as String,
-      userType: map['userType'] == 'faculty' ? UserType.faculty : UserType.student,
+      userType:
+          map['userType'] == 'faculty' ? UserType.faculty : UserType.student,
       studentId: map['studentId'] as String?,
       facultyId: map['facultyId'] as String?,
       department: map['department'] as String?,
-      googleAccountEmail: map['googleAccountEmail'] as String?,
-      isGoogleCalendarConnected: (map['isGoogleCalendarConnected'] as bool?) ?? false,
-      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ?? DateTime.now(),
+      gender: map['gender'] as String?,
+      dateOfBirth: map['dateOfBirth'] != null
+          ? DateTime.tryParse(map['dateOfBirth'] as String)
+          : null,
+      isGoogleUser:
+          map['isGoogleUser'] as bool? ?? map['googleAccountEmail'] != null,
+      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 
   Map<String, dynamic> toJson() => toMap();
-  factory UserModel.fromJson(Map<String, dynamic> json) => UserModel.fromMap(json);
+  factory UserModel.fromJson(Map<String, dynamic> json) =>
+      UserModel.fromMap(json);
 }

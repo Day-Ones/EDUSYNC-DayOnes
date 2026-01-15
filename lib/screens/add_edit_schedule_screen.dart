@@ -156,9 +156,9 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
       appBar: AppBar(
         title: Text(
           _editingSchedule != null ? 'Edit Event' : 'Add Event',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          style: GoogleFonts.inter(fontWeight: FontWeight.w600),
         ),
-        backgroundColor: const Color(0xFF2196F3),
+        backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         actions: [
           if (_editingSchedule != null)
@@ -201,7 +201,7 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
               controller: _titleController,
               decoration: InputDecoration(
                 labelText: 'Event Title',
-                labelStyle: GoogleFonts.albertSans(fontSize: 16),
+                labelStyle: GoogleFonts.inter(fontSize: 16),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 prefixIcon: const Icon(Icons.title),
               ),
@@ -217,7 +217,7 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
             // Schedule Type
             Text(
               'Event Type',
-              style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -241,11 +241,11 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
             // Date
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.calendar_today, color: Color(0xFF2196F3)),
-              title: Text('Date', style: GoogleFonts.albertSans(fontSize: 14)),
+              leading: const Icon(Icons.calendar_today, color: AppColors.primary),
+              title: Text('Date', style: GoogleFonts.inter(fontSize: 14)),
               subtitle: Text(
                 _formatDate(_selectedDate),
-                style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w500),
+                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w500),
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: _selectDate,
@@ -258,11 +258,11 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
                 Expanded(
                   child: ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.access_time, color: Color(0xFF2196F3)),
-                    title: Text('Start', style: GoogleFonts.albertSans(fontSize: 14)),
+                    leading: const Icon(Icons.access_time, color: AppColors.primary),
+                    title: Text('Start', style: GoogleFonts.inter(fontSize: 14)),
                     subtitle: Text(
                       _formatTime(_startTime),
-                      style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w500),
+                      style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w500),
                     ),
                     onTap: () => _selectTime(true),
                   ),
@@ -270,11 +270,11 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
                 Expanded(
                   child: ListTile(
                     contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.access_time_filled, color: Color(0xFF2196F3)),
-                    title: Text('End', style: GoogleFonts.albertSans(fontSize: 14)),
+                    leading: const Icon(Icons.access_time_filled, color: AppColors.primary),
+                    title: Text('End', style: GoogleFonts.inter(fontSize: 14)),
                     subtitle: Text(
                       _formatTime(_endTime),
-                      style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w500),
+                      style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w500),
                     ),
                     onTap: () => _selectTime(false),
                   ),
@@ -286,14 +286,14 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
             // Recurring
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text('Recurring Event', style: GoogleFonts.albertSans(fontSize: 16)),
+              title: Text('Recurring Event', style: GoogleFonts.inter(fontSize: 16)),
               subtitle: Text(
                 'Repeat on selected days',
-                style: GoogleFonts.albertSans(fontSize: 12, color: Colors.grey),
+                style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
               ),
               value: _isRecurring,
               onChanged: (value) => setState(() => _isRecurring = value),
-              activeColor: const Color(0xFF2196F3),
+              activeColor: AppColors.primary,
             ),
             if (_isRecurring) ...[
               const SizedBox(height: 8),
@@ -314,8 +314,8 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
                         }
                       });
                     },
-                    selectedColor: const Color(0xFF2196F3).withOpacity(0.2),
-                    checkmarkColor: const Color(0xFF2196F3),
+                    selectedColor: AppColors.primary.withOpacity(0.2),
+                    checkmarkColor: AppColors.primary,
                   );
                 }),
               ),
@@ -327,7 +327,7 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
               controller: _locationController,
               decoration: InputDecoration(
                 labelText: 'Location (optional)',
-                labelStyle: GoogleFonts.albertSans(fontSize: 16),
+                labelStyle: GoogleFonts.inter(fontSize: 16),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 prefixIcon: const Icon(Icons.location_on),
               ),
@@ -340,7 +340,7 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
               maxLines: 3,
               decoration: InputDecoration(
                 labelText: 'Description (optional)',
-                labelStyle: GoogleFonts.albertSans(fontSize: 16),
+                labelStyle: GoogleFonts.inter(fontSize: 16),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                 prefixIcon: const Icon(Icons.notes),
                 alignLabelWithHint: true,
@@ -351,7 +351,7 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
             // Reminder
             Text(
               'Reminder',
-              style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Wrap(
@@ -369,7 +369,7 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
             // Color
             Text(
               'Color',
-              style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w600),
+              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             BlockPicker(
@@ -409,13 +409,13 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
             ElevatedButton(
               onPressed: _saveSchedule,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2196F3),
+                backgroundColor: AppColors.primary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               child: Text(
                 _editingSchedule != null ? 'Update Event' : 'Add Event',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
@@ -441,7 +441,7 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
       ),
       selected: isSelected,
       onSelected: (_) => setState(() => _scheduleType = type),
-      selectedColor: const Color(0xFF2196F3),
+      selectedColor: AppColors.primary,
       labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black),
     );
   }
@@ -452,7 +452,7 @@ class _AddEditScheduleScreenState extends State<AddEditScheduleScreen> {
       label: Text(label),
       selected: isSelected,
       onSelected: (_) => setState(() => _reminderMinutes = minutes),
-      selectedColor: const Color(0xFF2196F3),
+      selectedColor: AppColors.primary,
       labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black),
     );
   }

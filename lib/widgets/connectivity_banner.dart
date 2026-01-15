@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/connectivity_service.dart';
 import '../providers/sync_manager_provider.dart';
+import '../providers/attendance_provider.dart';
 
 /// Widget that displays connectivity status and pending sync information
 class ConnectivityBanner extends StatelessWidget {
@@ -12,57 +13,84 @@ class ConnectivityBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final connectivity = context.watch<ConnectivityService>();
     final syncManager = context.watch<SyncManagerProvider>();
+    final attendanceProvider = context.watch<AttendanceProvider>();
+    final pendingCount = attendanceProvider.pendingSyncCount;
 
-    // Don't show banner if online and not syncing
-    if (connectivity.isOnline && !syncManager.isSyncing) {
+    // Don't show banner if online and not syncing and no pending items
+    if (connectivity.isOnline && !syncManager.isSyncing && pendingCount == 0) {
       return const SizedBox.shrink();
     }
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: connectivity.isOnline ? Colors.blue.shade700 : Colors.red.shade700,
-      child: Row(
-        children: [
-          Icon(
-            connectivity.isOnline ? Icons.sync : Icons.wifi_off,
-            color: Colors.white,
-            size: 20,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              connectivity.isOnline
-                  ? (syncManager.isSyncing
-                      ? 'Syncing data...'
-                      : syncManager.lastSyncStatus ?? 'Online')
-                  : 'Offline - Some features unavailable',
-              style: GoogleFonts.albertSans(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: connectivity.isOnline ? Colors.blue.shade700 : Colors.grey.shade800,
+      child: SafeArea(
+        bottom: false,
+        child: Row(
+          children: [
+            Icon(
+              connectivity.isOnline 
+                  ? (syncManager.isSyncing ? Icons.sync : Icons.cloud_done_rounded)
+                  : Icons.wifi_off_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    connectivity.isOnline
+                        ? (syncManager.isSyncing
+                            ? 'Syncing data...'
+                            : pendingCount > 0 
+                                ? '$pendingCount item${pendingCount > 1 ? 's' : ''} pending sync'
+                                : syncManager.lastSyncStatus ?? 'Online')
+                        : 'You\'re offline',
+                    style: GoogleFonts.inter(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (!connectivity.isOnline)
+                    Text(
+                      'Connect to internet to sync with your instructors',
+                      style: GoogleFonts.inter(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 11,
+                      ),
+                    ),
+                ],
               ),
             ),
-          ),
-          if (connectivity.isOnline && !syncManager.isSyncing)
-            TextButton(
-              onPressed: () => syncManager.manualSync(),
-              style: TextButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              child: Text(
-                'Sync Now',
-                style: GoogleFonts.albertSans(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+            if (connectivity.isOnline && !syncManager.isSyncing)
+              TextButton(
+                onPressed: () => syncManager.manualSync(),
+                style: TextButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  'Sync Now',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -91,7 +119,7 @@ class PendingSyncBadge extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             '$count pending',
-            style: GoogleFonts.albertSans(
+            style: GoogleFonts.inter(
               color: Colors.white,
               fontSize: 12,
               fontWeight: FontWeight.bold,

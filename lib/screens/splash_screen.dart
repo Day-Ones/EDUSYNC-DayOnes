@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../providers/auth_provider.dart';
+import '../theme/app_theme.dart';
 import '../widgets/loading_overlay.dart';
 import 'dashboard_screen.dart';
 import 'login_role_selection_screen.dart';
@@ -34,18 +35,16 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF2196F3),
+      backgroundColor: AppColors.primary,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // App Logo/Icon
+            // App Logo
             Container(
-              width: 100,
-              height: 100,
+              width: 120,
+              height: 120,
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.2),
@@ -54,16 +53,18 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.school,
-                size: 60,
-                color: Color(0xFF2196F3),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Image.asset(
+                  'assets/logo.png',
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
             const SizedBox(height: 24),
             Text(
               'EduSync',
-              style: GoogleFonts.poppins(
+              style: GoogleFonts.inter(
                 fontSize: 36,
                 fontWeight: FontWeight.w700,
                 color: Colors.white,
@@ -72,7 +73,7 @@ class _SplashScreenState extends State<SplashScreen> {
             const SizedBox(height: 8),
             Text(
               'Smart Attendance System',
-              style: GoogleFonts.albertSans(
+              style: GoogleFonts.inter(
                 fontSize: 16,
                 color: Colors.white.withOpacity(0.8),
               ),

@@ -9,7 +9,6 @@ import '../providers/class_provider.dart';
 import '../providers/schedule_provider.dart';
 import '../providers/location_provider.dart';
 import '../services/notification_service.dart';
-import '../services/calendar_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/connectivity_banner.dart';
 import '../widgets/loading_overlay.dart';
@@ -17,6 +16,7 @@ import 'add_edit_class_screen.dart';
 import 'join_class_screen.dart';
 import 'class_details_screen.dart';
 import 'login_role_selection_screen.dart';
+import 'schedule_management_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -60,7 +60,6 @@ class _MainScreenState extends State<MainScreen> {
         );
       }
 
-      // Initialize notifications for class reminders
       if (!_notificationsInitialized) {
         _notificationsInitialized = true;
         _initializeNotifications();
@@ -72,21 +71,18 @@ class _MainScreenState extends State<MainScreen> {
     final classProvider = context.read<ClassProvider>();
     final notificationService = context.read<NotificationService>();
 
-    // Start monitoring classes for notifications
     final allClasses = [
       ...classProvider.classes,
       ...classProvider.enrolledClasses
     ];
     notificationService.startClassMonitoring(allClasses);
 
-    // Schedule alerts for each class
     for (final classModel in allClasses) {
       if (classModel.alerts.isNotEmpty) {
         notificationService.scheduleAlerts(classModel);
       }
     }
 
-    // Listen for class changes to update notifications
     classProvider.addListener(() {
       final updatedClasses = [
         ...classProvider.classes,
@@ -99,7 +95,6 @@ class _MainScreenState extends State<MainScreen> {
   @override
   void dispose() {
     _pageController.dispose();
-    // Stop notification monitoring
     try {
       final notificationService = context.read<NotificationService>();
       notificationService.stopClassMonitoring();
@@ -135,12 +130,11 @@ class _MainScreenState extends State<MainScreen> {
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        // Minimize app (like pressing home button) instead of exiting
         SystemChannels.platform
             .invokeMethod('SystemNavigator.pop', {'animated': true});
       },
       child: Scaffold(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.background,
         body: Column(
           children: [
             const ConnectivityBanner(),
@@ -157,16 +151,116 @@ class _MainScreenState extends State<MainScreen> {
             ),
           ],
         ),
-        bottomNavigationBar: BottomNavigationBar(
+        bottomNavigationBar: _ModernBottomNav(
           currentIndex: _currentIndex,
           onTap: _onNavTap,
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: const Color(0xFF2196F3),
-          unselectedItemColor: Colors.grey,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.class_), label: 'Classes'),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== MODERN BOTTOM NAVIGATION ====================
+class _ModernBottomNav extends StatelessWidget {
+  final int currentIndex;
+  final Function(int) onTap;
+
+  const _ModernBottomNav({required this.currentIndex, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _NavItem(
+                icon: Icons.home_rounded,
+                label: 'Home',
+                isSelected: currentIndex == 0,
+                onTap: () => onTap(0),
+              ),
+              _NavItem(
+                icon: Icons.school_rounded,
+                label: 'Classes',
+                isSelected: currentIndex == 1,
+                onTap: () => onTap(1),
+              ),
+              _NavItem(
+                icon: Icons.person_rounded,
+                label: 'Profile',
+                isSelected: currentIndex == 2,
+                onTap: () => onTap(2),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(
+          horizontal: isSelected ? 20 : 16,
+          vertical: 10,
+        ),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.full),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? AppColors.primary : AppColors.textTertiary,
+              size: 24,
+            ),
+            if (isSelected) ...[
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -189,207 +283,472 @@ class _HomePanel extends StatelessWidget {
     final todayClasses = allClasses
         .where((c) => c.daysOfWeek.contains(DateTime.now().weekday))
         .toList();
-    final upcomingClasses = _getUpcomingClasses(todayClasses);
-    final todaySchedules = scheduleProvider.getTodaySchedules();
-    final upcomingSchedules = scheduleProvider.getUpcomingSchedules();
+    final upcomingClassesCount = _getUpcomingClasses(todayClasses);
 
-    return Column(
-      children: [
-        // Blue Header
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(24, 50, 24, 30),
-          decoration: const BoxDecoration(color: Color(0xFF2196F3)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Welcome back,',
-                style: GoogleFonts.albertSans(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w400),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                user.fullName.isNotEmpty ? user.fullName : 'User',
-                style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 36,
-                    fontWeight: FontWeight.w700),
-              ),
-            ],
+    return CustomScrollView(
+      slivers: [
+        // Modern Header
+        SliverToBoxAdapter(
+          child: _buildHeader(context, user),
+        ),
+        // Quick Stats
+        SliverToBoxAdapter(
+          child: _buildQuickStats(
+            allClasses.length,
+            todayClasses.length,
+            upcomingClassesCount,
           ),
         ),
-
-        // Stats Cards
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                  child: _buildStatCard(Icons.class_, const Color(0xFF64B5F6),
-                      allClasses.length.toString(), 'Classes')),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: _buildStatCard(
-                      Icons.event_note,
-                      const Color(0xFF81C784),
-                      todaySchedules.length.toString(),
-                      'Events')),
-              const SizedBox(width: 12),
-              Expanded(
-                  child: _buildStatCard(
-                      Icons.access_time,
-                      const Color(0xFFE57373),
-                      (upcomingClasses + upcomingSchedules.length).toString(),
-                      'Upcoming')),
-            ],
+        // Weekly Schedule Quick Access
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: _WeeklyScheduleCard(),
           ),
         ),
-
         // Today's Classes Section
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("Today's Classes",
-                        style: GoogleFonts.poppins(
-                            fontSize: 22, fontWeight: FontWeight.w700)),
-                    TextButton(
-                      onPressed: () {
-                        // Navigate to classes panel
-                        final mainState =
-                            context.findAncestorStateOfType<_MainScreenState>();
-                        mainState?._onNavTap(1);
-                      },
-                      child: Text('See All',
-                          style: GoogleFonts.albertSans(
-                              color: const Color(0xFF2196F3), fontSize: 16)),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Today's Schedule",
+                  style: GoogleFonts.inter(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final mainState =
+                        context.findAncestorStateOfType<_MainScreenState>();
+                    mainState?._onNavTap(1);
+                  },
+                  child: Text(
+                    'See All',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
                     ),
-                  ],
+                  ),
                 ),
-              ),
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                      color: const Color(0xFFE0E0E0),
-                      borderRadius: BorderRadius.circular(8)),
-                  child: todayClasses.isEmpty
-                      ? _buildEmptyClassesState(context)
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(8),
-                          itemCount: todayClasses.length,
-                          itemBuilder: (context, index) => _buildClassTile(
-                              context, todayClasses[index], enrolledClasses),
-                        ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
+              ],
+            ),
           ),
         ),
+        // Classes List
+        todayClasses.isEmpty
+            ? SliverFillRemaining(
+                hasScrollBody: false,
+                child: _buildEmptyState(context),
+              )
+            : SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _buildClassCard(
+                      context,
+                      todayClasses[index],
+                      enrolledClasses,
+                    ),
+                    childCount: todayClasses.length,
+                  ),
+                ),
+              ),
+        const SliverToBoxAdapter(child: SizedBox(height: 20)),
       ],
     );
   }
 
-  Widget _buildEmptyClassesState(BuildContext context) {
-    return Center(
+  Widget _buildHeader(BuildContext context, UserModel user) {
+    final greeting = _getGreeting();
+    final firstName = user.fullName.split(' ').first;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+          20, MediaQuery.of(context).padding.top + 20, 20, 24),
+      decoration: const BoxDecoration(
+        gradient: AppColors.headerGradient,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
+        ),
+      ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.event_busy, size: 48, color: Colors.grey[400]),
-          const SizedBox(height: 8),
-          Text('No classes today',
-              style: TextStyle(color: Colors.grey[600], fontSize: 16)),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () {
-              final mainState =
-                  context.findAncestorStateOfType<_MainScreenState>();
-              mainState?._onNavTap(1);
-            },
-            child: const Text('View all classes'),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      greeting,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      firstName,
+                      style: GoogleFonts.inter(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                      color: Colors.white.withOpacity(0.3), width: 2),
+                ),
+                child: CircleAvatar(
+                  radius: 24,
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  child: Text(
+                    firstName.isNotEmpty ? firstName[0].toUpperCase() : '?',
+                    style: GoogleFonts.inter(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.calendar_today_rounded,
+                  color: Colors.white.withOpacity(0.9),
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  _formatTodayDate(),
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildClassTile(BuildContext context, ClassModel classItem,
+  Widget _buildQuickStats(int classCount, int todayCount, int upcomingCount) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          Expanded(
+            child: _StatCard(
+              icon: Icons.school_rounded,
+              iconColor: AppColors.primary,
+              value: classCount.toString(),
+              label: 'Classes',
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _StatCard(
+              icon: Icons.today_rounded,
+              iconColor: AppColors.success,
+              value: todayCount.toString(),
+              label: 'Today',
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _StatCard(
+              icon: Icons.schedule_rounded,
+              iconColor: AppColors.warning,
+              value: upcomingCount.toString(),
+              label: 'Upcoming',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.event_available_rounded,
+                size: 48,
+                color: AppColors.textTertiary,
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'No classes today',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Enjoy your free time!',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClassCard(BuildContext context, ClassModel classItem,
       List<ClassModel> enrolledClasses) {
     final isEnrolled = enrolledClasses.any((c) => c.id == classItem.id);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        onTap: () => Navigator.pushNamed(context, ClassDetailsScreen.routeName,
-            arguments: classItem),
-        leading: CircleAvatar(
-          backgroundColor: classItem.color,
-          child: const Icon(Icons.book, color: Colors.white, size: 20),
+    final isActive = _isClassActive(classItem);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: () => Navigator.pushNamed(
+            context,
+            ClassDetailsScreen.routeName,
+            arguments: classItem,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: isActive
+                    ? classItem.color.withOpacity(0.5)
+                    : AppColors.border,
+                width: isActive ? 2 : 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: classItem.color,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: classItem.color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.book_rounded,
+                    color: classItem.color,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              classItem.name,
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isActive)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.success.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.success,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Now',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.success,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else if (isEnrolled)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                'Enrolled',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.access_time_rounded,
+                              size: 14, color: AppColors.textTertiary),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${_formatTime(classItem.startTime)} - ${_formatTime(classItem.endTime)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          if (classItem.campusLocation != null) ...[
+                            const SizedBox(width: 12),
+                            Icon(Icons.location_on_rounded,
+                                size: 14, color: AppColors.textTertiary),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                classItem.campusLocation!.room ??
+                                    classItem.campusLocation!.name,
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textTertiary,
+                ),
+              ],
+            ),
+          ),
         ),
-        title: Text(classItem.name,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(
-            '${_formatTime(classItem.startTime)} - ${_formatTime(classItem.endTime)}'),
-        trailing: isEnrolled
-            ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4)),
-                child: Text('Enrolled',
-                    style: GoogleFonts.albertSans(
-                        fontSize: 10,
-                        color: Colors.green,
-                        fontWeight: FontWeight.w600)),
-              )
-            : classItem.campusLocation != null
-                ? Text(classItem.campusLocation!.room ?? '',
-                    style: TextStyle(fontSize: 11, color: Colors.grey[600]))
-                : null,
       ),
     );
   }
 
-  Widget _buildStatCard(
-      IconData icon, Color iconColor, String value, String label) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2))
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-                color: iconColor.withValues(alpha: 0.2),
-                shape: BoxShape.circle),
-            child: Icon(icon, color: iconColor, size: 24),
-          ),
-          const SizedBox(height: 8),
-          Text(value,
-              style:
-                  const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-          Text(label,
-              style: GoogleFonts.albertSans(fontSize: 13, color: Colors.grey)),
-        ],
-      ),
-    );
+  bool _isClassActive(ClassModel classItem) {
+    final now = TimeOfDay.now();
+    final nowMinutes = now.hour * 60 + now.minute;
+    final startMinutes =
+        classItem.startTime.hour * 60 + classItem.startTime.minute;
+    final endMinutes = classItem.endTime.hour * 60 + classItem.endTime.minute;
+    return nowMinutes >= startMinutes && nowMinutes <= endMinutes;
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  String _formatTodayDate() {
+    final now = DateTime.now();
+    const days = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday'
+    ];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
   }
 
   int _getUpcomingClasses(List<ClassModel> todays) {
@@ -409,6 +768,220 @@ class _HomePanel extends StatelessWidget {
   }
 }
 
+// ==================== STAT CARD ====================
+class _StatCard extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String value;
+  final String label;
+
+  const _StatCard({
+    required this.icon,
+    required this.iconColor,
+    required this.value,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: iconColor, size: 22),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: GoogleFonts.inter(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==================== WEEKLY SCHEDULE CARD ====================
+class _WeeklyScheduleCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final classProvider = context.watch<ClassProvider>();
+    final allClasses = [
+      ...classProvider.classes,
+      ...classProvider.enrolledClasses,
+    ];
+
+    // Calculate classes per day for the mini preview
+    final dayClassCounts = List.generate(7, (dayIndex) {
+      final weekday = dayIndex + 1;
+      return allClasses.where((c) => c.daysOfWeek.contains(weekday)).length;
+    });
+
+    final dayNames = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    final today = DateTime.now().weekday - 1;
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, ScheduleManagementScreen.routeName);
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.primary,
+              AppColors.primary.withBlue(200),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.calendar_view_week_rounded,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Weekly Schedule',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          'View your full week',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Mini week preview
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(7, (index) {
+                final isToday = index == today;
+                final hasClasses = dayClassCounts[index] > 0;
+                return Column(
+                  children: [
+                    Text(
+                      dayNames[index],
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                        color: Colors.white.withOpacity(isToday ? 1 : 0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: isToday
+                            ? Colors.white
+                            : (hasClasses
+                                ? Colors.white.withOpacity(0.25)
+                                : Colors.white.withOpacity(0.1)),
+                        borderRadius: BorderRadius.circular(8),
+                        border: isToday
+                            ? null
+                            : Border.all(
+                                color: Colors.white.withOpacity(0.3),
+                                width: 1,
+                              ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${dayClassCounts[index]}',
+                          style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: isToday ? AppColors.primary : Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ==================== CLASSES PANEL ====================
 class _ClassesPanel extends StatelessWidget {
   final UserModel user;
@@ -421,30 +994,50 @@ class _ClassesPanel extends StatelessWidget {
     final classes = classProvider.classes;
     final enrolledClasses = classProvider.enrolledClasses;
     final allClasses = [...classes, ...enrolledClasses];
-    final hasClasses = allClasses.isNotEmpty;
 
     return Stack(
       children: [
-        Column(
-          children: [
-            // Blue Header
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 50, 24, 24),
-              decoration: const BoxDecoration(color: Color(0xFF2196F3)),
-              child: Text(
-                'My Classes',
-                style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w600),
+        CustomScrollView(
+          slivers: [
+            // Header
+            SliverToBoxAdapter(
+              child: Container(
+                padding: EdgeInsets.fromLTRB(
+                    20, MediaQuery.of(context).padding.top + 20, 20, 24),
+                decoration: const BoxDecoration(
+                  gradient: AppColors.headerGradient,
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(32),
+                    bottomRight: Radius.circular(32),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'My Classes',
+                      style: GoogleFonts.inter(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '${allClasses.length} ${allClasses.length == 1 ? 'class' : 'classes'} total',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-
-            // Classes List
-            Expanded(
-              child: classProvider.isLoading
-                  ? Center(
+            // Content
+            classProvider.isLoading
+                ? SliverFillRemaining(
+                    child: Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -452,197 +1045,232 @@ class _ClassesPanel extends StatelessWidget {
                           const SizedBox(height: 16),
                           Text(
                             'Loading classes...',
-                            style: GoogleFonts.albertSans(
+                            style: GoogleFonts.inter(
                               fontSize: 14,
-                              color: Colors.grey[600],
+                              color: AppColors.textSecondary,
                             ),
                           ),
                         ],
                       ),
-                    )
-                  : allClasses.isEmpty
-                      ? _buildEmptyState(context, isStudent)
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: allClasses.length,
-                          itemBuilder: (context, index) {
-                            final classItem = allClasses[index];
-                            final isEnrolled = enrolledClasses
-                                .any((c) => c.id == classItem.id);
-                            return _buildClassCard(
-                                context, classItem, isEnrolled, isStudent);
-                          },
+                    ),
+                  )
+                : allClasses.isEmpty
+                    ? SliverFillRemaining(
+                        child: _buildEmptyState(context, isStudent),
+                      )
+                    : SliverPadding(
+                        padding: const EdgeInsets.all(20),
+                        sliver: SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final classItem = allClasses[index];
+                              final isEnrolled = enrolledClasses
+                                  .any((c) => c.id == classItem.id);
+                              return _buildClassCard(
+                                  context, classItem, isEnrolled, isStudent);
+                            },
+                            childCount: allClasses.length,
+                          ),
                         ),
-            ),
+                      ),
+            const SliverToBoxAdapter(child: SizedBox(height: 80)),
           ],
         ),
-        // FAB - only show when user has classes
-        if (hasClasses)
-          Positioned(
-            right: 16,
-            bottom: 16,
-            child: FloatingActionButton(
-              onPressed: () => Navigator.pushNamed(
-                context,
-                isStudent
-                    ? JoinClassScreen.routeName
-                    : AddEditClassScreen.routeName,
-              ),
-              backgroundColor: const Color(0xFF2196F3),
-              child: const Icon(Icons.add, color: Colors.white),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context, bool isStudent) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.class_, size: 80, color: Colors.grey[300]),
-          const SizedBox(height: 16),
-          Text(
-            "You don't have a class yet",
-            style: GoogleFonts.poppins(fontSize: 18, color: Colors.grey[600]),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
+        // FAB
+        Positioned(
+          right: 20,
+          bottom: 20,
+          child: FloatingActionButton.extended(
             onPressed: () => Navigator.pushNamed(
               context,
               isStudent
                   ? JoinClassScreen.routeName
                   : AddEditClassScreen.routeName,
             ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2196F3),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-            child: Text(
-              isStudent ? 'Join Now' : 'Create Now',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            elevation: 4,
+            icon: const Icon(Icons.add_rounded),
+            label: Text(
+              isStudent ? 'Join Class' : 'Add Class',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w600),
             ),
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, bool isStudent) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceVariant,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.school_rounded,
+                size: 64,
+                color: AppColors.textTertiary,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              isStudent ? 'No classes yet' : 'No classes created',
+              style: GoogleFonts.inter(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isStudent
+                  ? 'Join your first class to get started'
+                  : 'Create your first class to begin',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.pushNamed(
+                context,
+                isStudent
+                    ? JoinClassScreen.routeName
+                    : AddEditClassScreen.routeName,
+              ),
+              icon:
+                  Icon(isStudent ? Icons.group_add_rounded : Icons.add_rounded),
+              label: Text(isStudent ? 'Join a Class' : 'Create Class'),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildClassCard(BuildContext context, ClassModel classItem,
       bool isEnrolled, bool isStudent) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () => Navigator.pushNamed(context, ClassDetailsScreen.routeName,
-            arguments: classItem),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border(left: BorderSide(color: classItem.color, width: 4)),
+      child: Material(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: () => Navigator.pushNamed(
+            context,
+            ClassDetailsScreen.routeName,
+            arguments: classItem,
           ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: classItem.color.withValues(alpha: 0.2),
-                child: Icon(Icons.class_, color: classItem.color),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            classItem.name,
-                            style: GoogleFonts.poppins(
-                                fontSize: 16, fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                        if (isEnrolled)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Enrolled',
-                              style: GoogleFonts.albertSans(
-                                  fontSize: 10,
-                                  color: Colors.green,
-                                  fontWeight: FontWeight.w600),
-                            ),
-                          ),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        classItem.color,
+                        classItem.color.withOpacity(0.7)
                       ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.schedule, size: 14, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${_formatTime(classItem.startTime)} - ${_formatTime(classItem.endTime)}',
-                          style: GoogleFonts.albertSans(
-                              fontSize: 13, color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Icon(Icons.calendar_today,
-                            size: 14, color: Colors.grey[600]),
-                        const SizedBox(width: 4),
-                        Text(
-                          _formatDays(classItem.daysOfWeek),
-                          style: GoogleFonts.albertSans(
-                              fontSize: 12, color: Colors.grey[500]),
-                        ),
-                      ],
-                    ),
-                    if (classItem.facultyName != null && isStudent) ...[
-                      const SizedBox(height: 2),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.book_rounded,
+                      color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Row(
                         children: [
-                          Icon(Icons.person, size: 14, color: Colors.grey[600]),
-                          const SizedBox(width: 4),
-                          Text(
-                            classItem.facultyName!,
-                            style: GoogleFonts.albertSans(
-                                fontSize: 12, color: Colors.grey[500]),
+                          Expanded(
+                            child: Text(
+                              classItem.name,
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textPrimary,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (isEnrolled)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.success.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                'Enrolled',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.success,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          _InfoChip(
+                            icon: Icons.access_time_rounded,
+                            text:
+                                '${_formatTime(classItem.startTime)} - ${_formatTime(classItem.endTime)}',
                           ),
                         ],
                       ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Flexible(
+                            child: _InfoChip(
+                              icon: Icons.calendar_today_rounded,
+                              text: _formatDays(classItem.daysOfWeek),
+                            ),
+                          ),
+                          if (classItem.facultyName != null && isStudent) ...[
+                            const SizedBox(width: 12),
+                            Flexible(
+                              child: _InfoChip(
+                                icon: Icons.person_rounded,
+                                text: classItem.facultyName!,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              if (classItem.campusLocation != null)
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Icon(Icons.location_on, size: 16, color: Colors.grey[400]),
-                    Text(
-                      classItem.campusLocation!.room ??
-                          classItem.campusLocation!.name,
-                      style: GoogleFonts.albertSans(
-                          fontSize: 11, color: Colors.grey[500]),
-                    ),
-                  ],
-                ),
-            ],
+                Icon(Icons.chevron_right_rounded,
+                    color: AppColors.textTertiary),
+              ],
+            ),
           ),
         ),
       ),
@@ -662,6 +1290,35 @@ class _ClassesPanel extends StatelessWidget {
   }
 }
 
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _InfoChip({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: AppColors.textTertiary),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            text,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // ==================== PROFILE PANEL ====================
 class _ProfilePanel extends StatefulWidget {
   final UserModel user;
@@ -672,558 +1329,467 @@ class _ProfilePanel extends StatefulWidget {
 }
 
 class _ProfilePanelState extends State<_ProfilePanel> {
-  bool _isSyncing = false;
-  bool _isTogglingSync = false;
-
-  Future<void> _toggleGoogleCalendarSync(bool value) async {
-    setState(() => _isTogglingSync = true);
-    
-    final auth = context.read<AuthProvider>();
-    final classProvider = context.read<ClassProvider>();
-    final calendarService = context.read<CalendarService>();
-    
-    try {
-      if (value) {
-        // Enable sync - sign in to Google and sync all classes
-        final account = await calendarService.signIn();
-        if (account == null) {
-          throw Exception('Google sign-in cancelled');
-        }
-        
-        debugPrint('Google account signed in: ${account.email}');
-        
-        // Get all classes (both created and enrolled)
-        final allClasses = [
-          ...classProvider.classes,
-          ...classProvider.enrolledClasses,
-        ];
-        
-        debugPrint('Syncing ${allClasses.length} classes to Google Calendar');
-        
-        // Sync all classes for next 7 days
-        await calendarService.syncAllClassesFor7Days(allClasses);
-        
-        // Update user's calendar sync status
-        final updatedUser = auth.user!.copyWith(
-          isGoogleCalendarConnected: true,
-          googleAccountEmail: account.email,
-        );
-        await auth.updateUser(updatedUser);
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Google Calendar sync enabled! Classes synced for next 7 days.'),
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
-      } else {
-        // Disable sync - clear all events
-        await calendarService.clearAllEvents();
-        
-        // Update user's calendar sync status
-        final updatedUser = auth.user!.copyWith(
-          isGoogleCalendarConnected: false,
-        );
-        await auth.updateUser(updatedUser);
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Google Calendar sync disabled. Events cleared.'),
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint('Error toggling calendar sync: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isTogglingSync = false);
-      }
-    }
-  }
-
-  Future<void> _manualSync() async {
-    setState(() => _isSyncing = true);
-    
-    final classProvider = context.read<ClassProvider>();
-    final calendarService = context.read<CalendarService>();
-    
-    try {
-      // Get all classes
-      final allClasses = [
-        ...classProvider.classes,
-        ...classProvider.enrolledClasses,
-      ];
-      
-      // Sync all classes for next 7 days
-      await calendarService.syncAllClassesFor7Days(allClasses);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Calendar synced successfully!'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sync failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isSyncing = false);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final user = widget.user;
+    final user = auth.user ?? widget.user;
 
-    return Column(
-      children: [
-        // Blue Header
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(24, 50, 24, 24),
-          decoration: const BoxDecoration(color: Color(0xFF2196F3)),
-          child: Text(
-            'Profile & Settings',
-            style: GoogleFonts.poppins(
-                color: Colors.white, fontSize: 28, fontWeight: FontWeight.w600),
-          ),
+    return CustomScrollView(
+      slivers: [
+        // Header with Avatar
+        SliverToBoxAdapter(
+          child: _buildProfileHeader(context, user),
         ),
-
         // Profile Content
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              // User Card
-              Card(
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 32,
-                        backgroundColor:
-                            const Color(0xFF257FCE).withValues(alpha: 0.2),
-                        child: Text(
-                          user.fullName.isNotEmpty
-                              ? user.fullName.characters.first.toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                              color: Color(0xFF257FCE),
-                              fontWeight: FontWeight.w800,
-                              fontSize: 24),
-                        ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Account Info Section
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildSectionTitle('Account Information'),
+                    TextButton.icon(
+                      onPressed: () => Navigator.pushNamed(
+                        context,
+                        '/edit-profile',
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(user.fullName,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.w800)),
-                            const SizedBox(height: 4),
-                            Text(user.email,
-                                style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textSecondary)),
-                            const SizedBox(height: 8),
-                            Chip(
-                              label: Text(
-                                user.userType.name.toUpperCase(),
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 11,
-                                    color: Colors.white),
-                              ),
-                              backgroundColor: const Color(0xFF257FCE),
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                            ),
-                          ],
-                        ),
+                      icon: const Icon(Icons.edit, size: 18),
+                      label: const Text('Edit'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.primary,
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _buildInfoCard([
+                  _InfoRow(
+                    icon: Icons.email_rounded,
+                    label: 'Email',
+                    value: user.email,
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Account Information
-              Text('Account Information',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      color: AppColors.textSecondary)),
-              const SizedBox(height: 8),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Department/Major'),
-                subtitle: Text(user.department ?? 'Not set',
-                    style: const TextStyle(color: AppColors.textSecondary)),
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('ID'),
-                subtitle: Text(user.studentId ?? user.facultyId ?? 'Not set',
-                    style: const TextStyle(color: AppColors.textSecondary)),
-              ),
-              const Divider(height: 24),
-
-              // Google Calendar Integration
-              Text('Google Calendar Integration',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      color: AppColors.textSecondary)),
-              const SizedBox(height: 8),
-              Card(
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                color: user.isGoogleCalendarConnected
-                    ? const Color(0xFF4CAF50).withValues(alpha: 0.08)
-                    : Colors.grey.withValues(alpha: 0.05),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: user.isGoogleCalendarConnected
-                                  ? const Color(0xFF4CAF50)
-                                      .withValues(alpha: 0.2)
-                                  : Colors.grey.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              Icons.cloud_sync,
-                              color: user.isGoogleCalendarConnected
-                                  ? const Color(0xFF4CAF50)
-                                  : Colors.grey,
-                              size: 24,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Sync Class Schedules',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(
-                                            fontWeight: FontWeight.w700)),
-                                Text(
-                                  user.isGoogleCalendarConnected
-                                      ? 'Syncing next 7 days daily'
-                                      : 'Not syncing',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: user.isGoogleCalendarConnected
-                                        ? const Color(0xFF4CAF50)
-                                        : Colors.grey,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Switch(
-                            value: user.isGoogleCalendarConnected,
-                            onChanged: _isTogglingSync
-                                ? null
-                                : _toggleGoogleCalendarSync,
-                            activeTrackColor: const Color(0xFF4CAF50)
-                                .withValues(alpha: 0.5),
-                            activeThumbColor: const Color(0xFF4CAF50),
-                          ),
-                        ],
-                      ),
-                      if (user.isGoogleCalendarConnected) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          'Your classes will appear in Google Calendar for the next 7 days. Syncs automatically daily.',
-                          style: GoogleFonts.albertSans(
-                              fontSize: 11, color: Colors.grey[600]),
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: _isSyncing ? null : _manualSync,
-                            icon: _isSyncing
-                                ? const DotsLoading(
-                                    color: Color(0xFF4CAF50),
-                                    size: 6,
-                                  )
-                                : const Icon(Icons.sync, size: 18),
-                            label: Text(_isSyncing ? 'Syncing...' : 'Sync Now'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: const Color(0xFF4CAF50),
-                              side: const BorderSide(color: Color(0xFF4CAF50)),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
+                  _InfoRow(
+                    icon: Icons.person_rounded,
+                    label: 'Gender',
+                    value: user.gender ?? 'Not set',
                   ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (user.googleAccountEmail != null)
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: const Text('Google Account'),
-                  subtitle: Text(user.googleAccountEmail!,
-                      style: const TextStyle(
-                          color: AppColors.textSecondary, fontSize: 12)),
-                ),
-              const Divider(height: 24),
+                  _InfoRow(
+                    icon: Icons.cake_rounded,
+                    label: 'Date of Birth',
+                    value: user.dateOfBirth != null
+                        ? '${user.dateOfBirth!.month}/${user.dateOfBirth!.day}/${user.dateOfBirth!.year}'
+                        : 'Not set',
+                  ),
+                  _InfoRow(
+                    icon: Icons.work_rounded,
+                    label: 'Role',
+                    value: user.userType == UserType.student
+                        ? 'Student'
+                        : 'Faculty',
+                  ),
+                ]),
 
-              // Location Sharing (Faculty only)
-              if (user.userType == UserType.faculty) ...[
-                Text('Location Sharing',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: AppColors.textSecondary)),
-                const SizedBox(height: 8),
-                Consumer<LocationProvider>(
-                  builder: (context, locationProvider, _) {
-                    return Card(
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      color: locationProvider.isSharing
-                          ? const Color(0xFF4CAF50).withValues(alpha: 0.08)
-                          : Colors.grey.withValues(alpha: 0.05),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: locationProvider.isSharing
-                                        ? const Color(0xFF4CAF50)
-                                            .withValues(alpha: 0.2)
-                                        : Colors.grey.withValues(alpha: 0.2),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    locationProvider.isSharing
-                                        ? Icons.location_on
-                                        : Icons.location_off,
-                                    color: locationProvider.isSharing
-                                        ? const Color(0xFF4CAF50)
-                                        : Colors.grey,
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text('Share Location with Students',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.copyWith(
-                                                  fontWeight: FontWeight.w700)),
-                                      Text(
-                                        locationProvider.isSharing
-                                            ? 'Students can see your ETA'
-                                            : 'Location sharing is off',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: locationProvider.isSharing
-                                              ? const Color(0xFF4CAF50)
-                                              : Colors.grey,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Switch(
-                                  value: locationProvider.isSharing,
-                                  onChanged: locationProvider.isLoading
-                                      ? null
-                                      : (value) async {
-                                          await locationProvider
-                                              .toggleSharing();
-                                          if (locationProvider.error != null &&
-                                              context.mounted) {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              SnackBar(
-                                                  content: Text(
-                                                      locationProvider.error!)),
-                                            );
-                                            locationProvider.clearError();
-                                          }
-                                        },
-                                  activeTrackColor: const Color(0xFF4CAF50)
-                                      .withValues(alpha: 0.5),
-                                  activeThumbColor: const Color(0xFF4CAF50),
-                                ),
-                              ],
-                            ),
-                            if (locationProvider.isSharing &&
-                                locationProvider.currentPosition != null) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                'Your location is being shared in real-time',
-                                style: GoogleFonts.albertSans(
-                                    fontSize: 11, color: Colors.grey[600]),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                const Divider(height: 24),
+                const SizedBox(height: 24),
+
+                // Location Sharing (Faculty only)
+                if (user.userType == UserType.faculty) ...[
+                  _buildSectionTitle('Location Sharing'),
+                  const SizedBox(height: 12),
+                  _buildLocationSharingCard(),
+                  const SizedBox(height: 24),
+                ],
+
+                // App Settings Section
+                _buildSectionTitle('Settings'),
+                const SizedBox(height: 12),
+                _buildSettingsCard(context, auth),
+
+                const SizedBox(height: 32),
               ],
-
-              // App Information
-              Text('App Information',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      color: AppColors.textSecondary)),
-              const SizedBox(height: 8),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('App Version'),
-                subtitle: const Text('0.1.0',
-                    style: TextStyle(color: AppColors.textSecondary)),
-              ),
-              const Divider(height: 24),
-
-              // Data Management
-              Text('Data Management',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                      color: AppColors.textSecondary)),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.delete_outline, color: AppColors.error),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.error,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                ),
-                onPressed: () async {
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: const Text('Clear Local Data?'),
-                      content: const Text(
-                          'This will delete all locally saved data.'),
-                      actions: [
-                        TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancel')),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          child: const Text('Clear',
-                              style: TextStyle(color: AppColors.error)),
-                        ),
-                      ],
-                    ),
-                  );
-                  if (confirm == true && mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Local data cleared'),
-                          duration: Duration(seconds: 2)),
-                    );
-                  }
-                },
-                label: const Text('Clear Local Data'),
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                icon: const Icon(Icons.logout, color: AppColors.error),
-                style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.error,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8))),
-                onPressed: () async {
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: const Text('Logout'),
-                      content: const Text('Are you sure you want to logout?'),
-                      actions: [
-                        TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancel')),
-                        TextButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Logout')),
-                      ],
-                    ),
-                  );
-                  if (confirm == true) {
-                    if (context.mounted) {
-                      context.read<LocationProvider>().onLogout();
-                    }
-                    await auth.logout();
-                    if (!context.mounted) return;
-                    Navigator.pushNamedAndRemoveUntil(context,
-                        LoginRoleSelectionScreen.routeName, (_) => false);
-                  }
-                },
-                label: const Text('Logout'),
-              ),
-              const SizedBox(height: 32),
-            ],
+            ),
           ),
         ),
       ],
     );
   }
+
+  Widget _buildProfileHeader(BuildContext context, UserModel user) {
+    final firstName = user.fullName.split(' ').first;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+          20, MediaQuery.of(context).padding.top + 20, 20, 32),
+      decoration: const BoxDecoration(
+        gradient: AppColors.headerGradient,
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(32),
+          bottomRight: Radius.circular(32),
+        ),
+      ),
+      child: Column(
+        children: [
+          // Avatar
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border:
+                  Border.all(color: Colors.white.withOpacity(0.3), width: 3),
+            ),
+            child: CircleAvatar(
+              radius: 48,
+              backgroundColor: Colors.white.withOpacity(0.2),
+              child: Text(
+                firstName.isNotEmpty ? firstName[0].toUpperCase() : '?',
+                style: GoogleFonts.inter(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Name
+          Text(
+            user.fullName,
+            style: GoogleFonts.inter(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          // Email
+          Text(
+            user.email,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: Colors.white.withOpacity(0.8),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Role Badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              user.userType.name.toUpperCase(),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: GoogleFonts.inter(
+        fontSize: 16,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textPrimary,
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(List<_InfoRow> rows) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: rows.asMap().entries.map((entry) {
+          final index = entry.key;
+          final row = entry.value;
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(row.icon, color: AppColors.primary, size: 20),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            row.label,
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            row.value,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (index < rows.length - 1)
+                const Divider(height: 1, indent: 16, endIndent: 16),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildLocationSharingCard() {
+    return Consumer<LocationProvider>(
+      builder: (context, locationProvider, _) {
+        final isSharing = locationProvider.isSharing;
+
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSharing
+                  ? AppColors.success.withOpacity(0.3)
+                  : AppColors.border,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isSharing
+                        ? AppColors.success.withOpacity(0.1)
+                        : AppColors.surfaceVariant,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    isSharing
+                        ? Icons.location_on_rounded
+                        : Icons.location_off_rounded,
+                    color:
+                        isSharing ? AppColors.success : AppColors.textTertiary,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Share Location',
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isSharing
+                            ? 'Students can see your ETA'
+                            : 'Location hidden',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: isSharing
+                              ? AppColors.success
+                              : AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: isSharing,
+                  onChanged: locationProvider.isLoading
+                      ? null
+                      : (value) async {
+                          await locationProvider.toggleSharing();
+                          if (locationProvider.error != null &&
+                              context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text(locationProvider.error!)),
+                            );
+                            locationProvider.clearError();
+                          }
+                        },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSettingsCard(BuildContext context, AuthProvider auth) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        children: [
+          // Reminder Settings
+          _buildSettingsTile(
+            icon: Icons.notifications_active_rounded,
+            iconColor: AppColors.primary,
+            title: 'Reminder Settings',
+            subtitle: 'Manage class notifications',
+            onTap: () => Navigator.pushNamed(context, '/reminder-settings'),
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          // App Version
+          _buildSettingsTile(
+            icon: Icons.info_outline_rounded,
+            iconColor: AppColors.textSecondary,
+            title: 'App Version',
+            subtitle: '1.0.0',
+            onTap: null,
+          ),
+          const Divider(height: 1, indent: 16, endIndent: 16),
+          // Logout
+          _buildSettingsTile(
+            icon: Icons.logout_rounded,
+            iconColor: AppColors.error,
+            title: 'Logout',
+            subtitle: 'Sign out of your account',
+            onTap: () => _showLogoutDialog(context, auth),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsTile({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: iconColor, size: 20),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (onTap != null)
+              Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showLogoutDialog(
+      BuildContext context, AuthProvider auth) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppColors.error),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      if (context.mounted) {
+        context.read<LocationProvider>().onLogout();
+      }
+      await auth.logout();
+      if (!context.mounted) return;
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        LoginRoleSelectionScreen.routeName,
+        (_) => false,
+      );
+    }
+  }
+}
+
+class _InfoRow {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 }

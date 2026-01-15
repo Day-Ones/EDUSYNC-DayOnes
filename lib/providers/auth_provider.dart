@@ -22,22 +22,31 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> login(String email, String password, {required UserType role, bool remember = false}) async {
+  Future<String?> login(String email, String password,
+      {required UserType role, bool remember = false}) async {
     _loading = true;
     notifyListeners();
-    final result = await _authService.login(email, password, role: role, remember: remember);
-    _user = result;
-    _loading = false;
-    notifyListeners();
-    return result == null ? 'Invalid credentials or wrong role selected' : null;
+    final result = await _authService.login(email, password,
+        role: role, remember: remember);
+
+    if (result.containsKey('user')) {
+      _user = result['user'] as UserModel;
+      _loading = false;
+      notifyListeners();
+      return null;
+    } else {
+      _loading = false;
+      notifyListeners();
+      return result['error'] as String? ?? 'Login failed';
+    }
   }
 
   Future<String?> signInWithGoogle({required UserType role}) async {
     _loading = true;
     notifyListeners();
-    
+
     final result = await _authService.signInWithGoogle(role: role);
-    
+
     if (result['success'] == true) {
       _user = result['user'] as UserModel;
       _loading = false;
@@ -55,25 +64,45 @@ class AuthProvider extends ChangeNotifier {
     required String password,
     required String fullName,
     required UserType userType,
-    String? studentId,
-    String? facultyId,
-    String? department,
+    String? gender,
+    DateTime? dateOfBirth,
   }) async {
     _loading = true;
     notifyListeners();
-    final user = await _authService.signUp(
-      email: email,
-      password: password,
-      fullName: fullName,
-      userType: userType,
-      studentId: studentId,
-      facultyId: facultyId,
-      department: department,
-    );
-    _user = user;
-    _loading = false;
-    notifyListeners();
-    return user == null ? 'Failed to create account. Email may already be in use.' : null;
+    try {
+      final user = await _authService.signUp(
+        email: email,
+        password: password,
+        fullName: fullName,
+        userType: userType,
+        gender: gender,
+        dateOfBirth: dateOfBirth,
+      );
+      _user = user;
+      _loading = false;
+      notifyListeners();
+      return user == null ? 'Failed to create account' : null;
+    } catch (e) {
+      _loading = false;
+      notifyListeners();
+      return e.toString().replaceFirst('Exception: ', '');
+    }
+  }
+
+  Future<bool> isEmailInUse(String email) async {
+    try {
+      return await _authService.isEmailInUse(email);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> checkEmailStatus(String email) async {
+    try {
+      return await _authService.checkEmailStatus(email);
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<void> logout() async {
@@ -87,5 +116,36 @@ class AuthProvider extends ChangeNotifier {
     // Persist the updated user to storage
     await _authService.updateUser(updatedUser);
     notifyListeners();
+  }
+
+  Future<String?> updateEmail(String newEmail) async {
+    _loading = true;
+    notifyListeners();
+    try {
+      await _authService.updateEmail(newEmail);
+      _loading = false;
+      notifyListeners();
+      return null;
+    } catch (e) {
+      _loading = false;
+      notifyListeners();
+      return e.toString().replaceFirst('Exception: ', '');
+    }
+  }
+
+  Future<String?> changePassword(
+      String currentPassword, String newPassword) async {
+    _loading = true;
+    notifyListeners();
+    try {
+      await _authService.changePassword(currentPassword, newPassword);
+      _loading = false;
+      notifyListeners();
+      return null;
+    } catch (e) {
+      _loading = false;
+      notifyListeners();
+      return e.toString().replaceFirst('Exception: ', '');
+    }
   }
 }

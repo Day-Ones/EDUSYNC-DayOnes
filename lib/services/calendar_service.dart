@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/calendar/v3.dart' as calendar;
-import 'package:googleapis_auth/googleapis_auth.dart' as auth;
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/class.dart';
@@ -11,23 +10,57 @@ class CalendarService {
   CalendarService(this._googleSignIn);
 
   final GoogleSignIn _googleSignIn;
-  static const String _eventSourceTag = 'EduSync';
 
+  /// The email of the account to sync with (set from user profile)
+  String? _targetEmail;
+
+  /// Set the target email for calendar sync (should be called when user logs in)
+  void setTargetEmail(String? email) {
+    _targetEmail = email;
+  }
+
+  /// Sign in to Google for calendar access
+  /// If targetEmail is set, ensures we sign in with that specific account
   Future<GoogleSignInAccount?> signIn() async {
-    // Try silent sign-in first
+    // First check if we already have the correct account signed in
     final currentUser = _googleSignIn.currentUser;
     if (currentUser != null) {
-      return currentUser;
+      // If we have a target email, make sure it matches
+      if (_targetEmail != null && currentUser.email != _targetEmail) {
+        // Wrong account - sign out and request the correct one
+        await _googleSignIn.signOut();
+      } else {
+        return currentUser;
+      }
     }
-    
-    // Try silent sign-in
+
+    // Try silent sign-in first
     final silentUser = await _googleSignIn.signInSilently();
     if (silentUser != null) {
-      return silentUser;
+      // If we have a target email, verify it matches
+      if (_targetEmail != null && silentUser.email != _targetEmail) {
+        // Wrong account - sign out and show account picker
+        await _googleSignIn.signOut();
+      } else {
+        return silentUser;
+      }
     }
-    
-    // Fall back to interactive sign-in
-    return _googleSignIn.signIn();
+
+    // Interactive sign-in - user will pick account
+    final signedInUser = await _googleSignIn.signIn();
+
+    // Verify the signed-in account matches the target email
+    if (signedInUser != null &&
+        _targetEmail != null &&
+        signedInUser.email != _targetEmail) {
+      // User signed in with a different account than the one in their profile
+      await _googleSignIn.signOut();
+      throw Exception(
+          'Please sign in with $_targetEmail to sync your calendar. '
+          'You signed in with ${signedInUser.email} instead.');
+    }
+
+    return signedInUser;
   }
 
   Future<void> signOut() async {
@@ -56,7 +89,7 @@ class CalendarService {
       // Create events for next 7 days
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
-      
+
       for (final classModel in classes) {
         // For each day in the next 7 days
         for (int dayOffset = 0; dayOffset < 7; dayOffset++) {
@@ -66,11 +99,12 @@ class CalendarService {
           // Check if class occurs on this day
           if (classModel.daysOfWeek.contains(targetWeekday)) {
             final event = _createSingleDayEvent(classModel, targetDate);
-            
+
             try {
               await calendarApi.events.insert(event, 'primary');
             } catch (e) {
-              debugPrint('Error inserting event for ${classModel.name} on $targetDate: $e');
+              debugPrint(
+                  'Error inserting event for ${classModel.name} on $targetDate: $e');
             }
           }
         }
@@ -104,7 +138,7 @@ class CalendarService {
       if (events.items != null) {
         for (final event in events.items!) {
           // Check if this is an EduSync event by checking description
-          if (event.id != null && 
+          if (event.id != null &&
               event.description != null &&
               event.description!.contains('Synced from EduSync')) {
             try {
@@ -230,9 +264,9 @@ class CalendarService {
     // Google Calendar has 11 color options (1-11)
     // Map Flutter colors to closest Google Calendar colors
     final hue = HSVColor.fromColor(color).hue;
-    
+
     if (hue < 30) return '11'; // Red
-    if (hue < 60) return '5';  // Orange
+    if (hue < 60) return '5'; // Orange
     if (hue < 90) return '10'; // Yellow
     if (hue < 150) return '2'; // Green
     if (hue < 210) return '9'; // Blue

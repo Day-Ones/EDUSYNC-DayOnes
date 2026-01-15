@@ -161,7 +161,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
               children: [
                 Text(
                   filterLabel,
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -190,7 +190,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                               : _filter == 'present'
                                   ? 'No students present yet'
                                   : 'No students enrolled',
-                          style: GoogleFonts.poppins(color: Colors.grey[600]),
+                          style: GoogleFonts.inter(color: Colors.grey[600]),
                         ),
                       ],
                     ),
@@ -210,7 +210,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
         backgroundColor: classModel.color,
         icon: const Icon(Icons.qr_code, color: Colors.white),
         label: Text('Check Attendance',
-            style: GoogleFonts.poppins(color: Colors.white)),
+            style: GoogleFonts.inter(color: Colors.white)),
       ),
     );
   }
@@ -245,7 +245,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
             children: [
               Text(
                 value,
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.inter(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
                   color: color,
@@ -253,7 +253,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
               ),
               Text(
                 label,
-                style: GoogleFonts.albertSans(
+                style: GoogleFonts.inter(
                   fontSize: 12,
                   color: isSelected ? color : Colors.grey[600],
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
@@ -292,7 +292,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
               backgroundColor: statusColor.withOpacity(0.1),
               child: Text(
                 student.name.split(' ').map((n) => n[0]).take(2).join(),
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.inter(
                   fontWeight: FontWeight.w600,
                   color: statusColor,
                 ),
@@ -314,12 +314,12 @@ class _StudentListScreenState extends State<StudentListScreen> {
           ],
         ),
         title: Text(student.name,
-            style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(student.studentId ?? student.email,
-                style: GoogleFonts.albertSans(fontSize: 12)),
+                style: GoogleFonts.inter(fontSize: 12)),
             const SizedBox(height: 4),
             if (student.isCheckedInToday && student.checkedInTime != null)
               Row(
@@ -328,7 +328,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                   const SizedBox(width: 4),
                   Text(
                     '${student.todayStatus == AttendanceStatus.late ? 'Late' : 'Present'} - ${_formatTime(student.checkedInTime!)}',
-                    style: GoogleFonts.albertSans(
+                    style: GoogleFonts.inter(
                         fontSize: 12,
                         color: statusColor,
                         fontWeight: FontWeight.w600),
@@ -342,7 +342,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                   const SizedBox(width: 4),
                   Text(
                     '${student.todayStatus == AttendanceStatus.late ? 'Late' : 'Present'}',
-                    style: GoogleFonts.albertSans(
+                    style: GoogleFonts.inter(
                         fontSize: 12,
                         color: statusColor,
                         fontWeight: FontWeight.w600),
@@ -356,7 +356,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                   const SizedBox(width: 4),
                   Text(
                     'Not checked in yet',
-                    style: GoogleFonts.albertSans(
+                    style: GoogleFonts.inter(
                         fontSize: 12, color: Colors.grey[500]),
                   ),
                 ],
@@ -371,7 +371,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
           ),
           child: Text(
             statusText,
-            style: GoogleFonts.albertSans(
+            style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: statusColor,
@@ -418,13 +418,13 @@ class _StudentListScreenState extends State<StudentListScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text('Cannot Generate QR',
-                    style: GoogleFonts.poppins(fontSize: 18)),
+                    style: GoogleFonts.inter(fontSize: 18)),
               ),
             ],
           ),
           content: Text(
             message,
-            style: GoogleFonts.albertSans(),
+            style: GoogleFonts.inter(),
           ),
           actions: [
             TextButton(
@@ -464,7 +464,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text('Attendance QR',
-                    style: GoogleFonts.poppins(fontSize: 18)),
+                    style: GoogleFonts.inter(fontSize: 18)),
               ),
             ],
           ),
@@ -474,7 +474,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
               children: [
                 Text(
                   'Students scan this code to check in',
-                  style: GoogleFonts.albertSans(color: Colors.grey[600]),
+                  style: GoogleFonts.inter(color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 16),
                 Container(
@@ -498,7 +498,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                 const SizedBox(height: 16),
                 Text(
                   classModel.name,
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 8),
                 Row(
@@ -508,7 +508,7 @@ class _StudentListScreenState extends State<StudentListScreen> {
                     const SizedBox(width: 4),
                     Text(
                       'Valid for 5 minutes',
-                      style: GoogleFonts.albertSans(
+                      style: GoogleFonts.inter(
                           fontSize: 12, color: Colors.orange[700]),
                     ),
                   ],
