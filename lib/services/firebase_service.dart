@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import '../models/attendance.dart';
 import '../models/class.dart';
 import 'offline_sync_service.dart';
@@ -370,6 +371,34 @@ class FirebaseService {
 
       return true;
     } catch (e) {
+      return false;
+    }
+  }
+
+  /// Delete a class and unenroll all students
+  Future<bool> deleteClass(String classId) async {
+    try {
+      // Get all enrolled students for this class
+      final studentsSnapshot = await _firestore
+          .collection('class_students')
+          .where('classId', isEqualTo: classId)
+          .get();
+
+      // Delete all class_students documents for this class
+      final batch = _firestore.batch();
+      for (final doc in studentsSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Delete the class document
+      batch.delete(_firestore.collection('classes').doc(classId));
+
+      // Commit the batch
+      await batch.commit();
+
+      return true;
+    } catch (e) {
+      debugPrint('Error deleting class from Firebase: $e');
       return false;
     }
   }

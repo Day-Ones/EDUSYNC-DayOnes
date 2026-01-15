@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/loading_overlay.dart';
 import 'dashboard_screen.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -96,52 +97,60 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF257FCE),
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.2),
-              ),
-              child: const Icon(
-                Icons.chevron_left,
-                color: Colors.white,
-                size: 28,
+    final auth = context.watch<AuthProvider>();
+    final isLoading = auth.isLoading;
+    
+    return PopScope(
+      canPop: !isLoading,
+      child: LoadingOverlay(
+        isLoading: isLoading,
+        message: 'Creating your account...',
+        child: Scaffold(
+          backgroundColor: const Color(0xFF257FCE),
+          appBar: AppBar(
+            automaticallyImplyLeading: false,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: GestureDetector(
+                onTap: isLoading ? null : () => Navigator.pop(context),
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.2),
+                  ),
+                  child: Icon(
+                    Icons.chevron_left,
+                    color: isLoading ? Colors.white54 : Colors.white,
+                    size: 28,
+                  ),
+                ),
               ),
             ),
           ),
-        ),
-      ),
-      body: SafeArea(
-        child: Center(
-          child: Container(
-            margin: const EdgeInsets.all(20),
-            padding: const EdgeInsets.all(30),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(15),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
+          body: SafeArea(
+            child: Center(
+              child: Container(
+                margin: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(30),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: SingleChildScrollView(
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
                     // Welcome Title
                     Text(
                       'Welcome!',
@@ -565,28 +574,29 @@ class _SignupScreenState extends State<SignupScreen> {
                     SizedBox(
                       width: double.infinity,
                       height: 50,
-                      child: Consumer<AuthProvider>(
-                        builder: (context, auth, child) => ElevatedButton(
-                          onPressed: auth.isLoading ? null : _createAccount,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF257FCE),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            elevation: 0,
+                      child: ElevatedButton(
+                        onPressed: isLoading ? null : _createAccount,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF257FCE),
+                          disabledBackgroundColor: const Color(0xFF257FCE).withOpacity(0.6),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Text(
-                            'Create Account',
-                            style: GoogleFonts.albertSans(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          'Create Account',
+                          style: GoogleFonts.albertSans(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
                           ),
                         ),
                       ),
                     ),
-                  ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),

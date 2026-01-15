@@ -81,4 +81,11 @@ class AuthProvider extends ChangeNotifier {
     _user = null;
     notifyListeners();
   }
+
+  Future<void> updateUser(UserModel updatedUser) async {
+    _user = updatedUser;
+    // Persist the updated user to storage
+    await _authService.updateUser(updatedUser);
+    notifyListeners();
+  }
 }

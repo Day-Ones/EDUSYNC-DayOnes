@@ -67,18 +67,18 @@ void main() async {
 
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
-  // Initialize services
-  final authService = AuthService(const FlutterSecureStorage());
-  final dbService = LocalDbService();
-  final locationService = LocationService();
-
-  // Initialize Google Sign-In for Calendar sync
+  // Initialize Google Sign-In with calendar scope (shared between auth and calendar)
   final googleSignIn = GoogleSignIn(
     scopes: [
       'email',
       'https://www.googleapis.com/auth/calendar',
     ],
   );
+
+  // Initialize services
+  final authService = AuthService(const FlutterSecureStorage(), googleSignIn: googleSignIn);
+  final dbService = LocalDbService();
+  final locationService = LocationService();
   final calendarService = CalendarService(googleSignIn);
 
   runApp(SmartSchedulerApp(
@@ -170,13 +170,14 @@ class _SmartSchedulerAppState extends State<SmartSchedulerApp> {
             create: (_) => AuthProvider(widget.authService)..bootstrap()),
         ChangeNotifierProvider(
             create: (_) => ClassProvider(
-                widget.dbService, SmartSchedulerApp.firebaseService)),
+                widget.dbService, SmartSchedulerApp.firebaseService, widget.calendarService)),
         ChangeNotifierProvider(
             create: (_) => ScheduleProvider(widget.dbService)),
         ChangeNotifierProvider(
             create: (_) => LocationProvider(widget.locationService)),
         ChangeNotifierProvider(
             create: (_) => SyncProvider(widget.calendarService)),
+        Provider.value(value: widget.calendarService),
         ChangeNotifierProvider(
             create: (_) =>
                 AttendanceProvider(SmartSchedulerApp.firebaseService)),

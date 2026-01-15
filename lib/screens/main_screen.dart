@@ -9,8 +9,10 @@ import '../providers/class_provider.dart';
 import '../providers/schedule_provider.dart';
 import '../providers/location_provider.dart';
 import '../services/notification_service.dart';
+import '../services/calendar_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/connectivity_banner.dart';
+import '../widgets/loading_overlay.dart';
 import 'add_edit_class_screen.dart';
 import 'join_class_screen.dart';
 import 'class_details_screen.dart';
@@ -123,7 +125,10 @@ class _MainScreenState extends State<MainScreen> {
     final user = auth.user;
 
     if (user == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const FullScreenLoading(
+        message: 'Loading...',
+        subMessage: 'Please wait while we set things up',
+      );
     }
 
     return PopScope(
@@ -439,7 +444,22 @@ class _ClassesPanel extends StatelessWidget {
             // Classes List
             Expanded(
               child: classProvider.isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const EduSyncLoadingIndicator(size: 50),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Loading classes...',
+                            style: GoogleFonts.albertSans(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
                   : allClasses.isEmpty
                       ? _buildEmptyState(context, isStudent)
                       : ListView.builder(
@@ -652,38 +672,128 @@ class _ProfilePanel extends StatefulWidget {
 }
 
 class _ProfilePanelState extends State<_ProfilePanel> {
-  DateTime? _lastSyncTime;
   bool _isSyncing = false;
+  bool _isTogglingSync = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _lastSyncTime = DateTime.now().subtract(const Duration(minutes: 15));
+  Future<void> _toggleGoogleCalendarSync(bool value) async {
+    setState(() => _isTogglingSync = true);
+    
+    final auth = context.read<AuthProvider>();
+    final classProvider = context.read<ClassProvider>();
+    final calendarService = context.read<CalendarService>();
+    
+    try {
+      if (value) {
+        // Enable sync - sign in to Google and sync all classes
+        final account = await calendarService.signIn();
+        if (account == null) {
+          throw Exception('Google sign-in cancelled');
+        }
+        
+        debugPrint('Google account signed in: ${account.email}');
+        
+        // Get all classes (both created and enrolled)
+        final allClasses = [
+          ...classProvider.classes,
+          ...classProvider.enrolledClasses,
+        ];
+        
+        debugPrint('Syncing ${allClasses.length} classes to Google Calendar');
+        
+        // Sync all classes for next 7 days
+        await calendarService.syncAllClassesFor7Days(allClasses);
+        
+        // Update user's calendar sync status
+        final updatedUser = auth.user!.copyWith(
+          isGoogleCalendarConnected: true,
+          googleAccountEmail: account.email,
+        );
+        await auth.updateUser(updatedUser);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Google Calendar sync enabled! Classes synced for next 7 days.'),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        // Disable sync - clear all events
+        await calendarService.clearAllEvents();
+        
+        // Update user's calendar sync status
+        final updatedUser = auth.user!.copyWith(
+          isGoogleCalendarConnected: false,
+        );
+        await auth.updateUser(updatedUser);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Google Calendar sync disabled. Events cleared.'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error toggling calendar sync: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isTogglingSync = false);
+      }
+    }
   }
 
   Future<void> _manualSync() async {
     setState(() => _isSyncing = true);
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() {
-      _isSyncing = false;
-      _lastSyncTime = DateTime.now();
-    });
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-          content: Text('Calendar synced successfully!'),
-          duration: Duration(seconds: 2)),
-    );
-  }
-
-  String _formatLastSync(DateTime? time) {
-    if (time == null) return 'Never';
-    final now = DateTime.now();
-    final diff = now.difference(time);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
+    
+    final classProvider = context.read<ClassProvider>();
+    final calendarService = context.read<CalendarService>();
+    
+    try {
+      // Get all classes
+      final allClasses = [
+        ...classProvider.classes,
+        ...classProvider.enrolledClasses,
+      ];
+      
+      // Sync all classes for next 7 days
+      await calendarService.syncAllClassesFor7Days(allClasses);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Calendar synced successfully!'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Sync failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSyncing = false);
+      }
+    }
   }
 
   @override
@@ -832,7 +942,7 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Calendar Status',
+                                Text('Sync Class Schedules',
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodySmall
@@ -840,8 +950,8 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                                             fontWeight: FontWeight.w700)),
                                 Text(
                                   user.isGoogleCalendarConnected
-                                      ? 'Connected'
-                                      : 'Not connected',
+                                      ? 'Syncing next 7 days daily'
+                                      : 'Not syncing',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: user.isGoogleCalendarConnected
@@ -853,20 +963,56 @@ class _ProfilePanelState extends State<_ProfilePanel> {
                               ],
                             ),
                           ),
+                          Switch(
+                            value: user.isGoogleCalendarConnected,
+                            onChanged: _isTogglingSync
+                                ? null
+                                : _toggleGoogleCalendarSync,
+                            activeTrackColor: const Color(0xFF4CAF50)
+                                .withValues(alpha: 0.5),
+                            activeThumbColor: const Color(0xFF4CAF50),
+                          ),
                         ],
                       ),
+                      if (user.isGoogleCalendarConnected) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          'Your classes will appear in Google Calendar for the next 7 days. Syncs automatically daily.',
+                          style: GoogleFonts.albertSans(
+                              fontSize: 11, color: Colors.grey[600]),
+                        ),
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: _isSyncing ? null : _manualSync,
+                            icon: _isSyncing
+                                ? const DotsLoading(
+                                    color: Color(0xFF4CAF50),
+                                    size: 6,
+                                  )
+                                : const Icon(Icons.sync, size: 18),
+                            label: Text(_isSyncing ? 'Syncing...' : 'Sync Now'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: const Color(0xFF4CAF50),
+                              side: const BorderSide(color: Color(0xFF4CAF50)),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Google Account'),
-                subtitle: Text(user.googleAccountEmail ?? 'Not connected',
-                    style: const TextStyle(
-                        color: AppColors.textSecondary, fontSize: 12)),
-              ),
+              if (user.googleAccountEmail != null)
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Google Account'),
+                  subtitle: Text(user.googleAccountEmail!,
+                      style: const TextStyle(
+                          color: AppColors.textSecondary, fontSize: 12)),
+                ),
               const Divider(height: 24),
 
               // Location Sharing (Faculty only)

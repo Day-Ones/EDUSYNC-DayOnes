@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../services/connectivity_service.dart';
+import '../widgets/loading_overlay.dart';
 import 'dashboard_screen.dart';
 import 'signup_screen.dart';
 
@@ -69,33 +70,38 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final isLoading = auth.isLoading || _isGoogleLoading;
+    
     return PopScope(
-      canPop: true, // Allow normal back navigation
-      child: Scaffold(
-        backgroundColor: const Color(0xFFE8E8E8),
-        appBar: AppBar(
-          automaticallyImplyLeading: false,
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF257FCE).withOpacity(0.1),
-                ),
-                child: const Icon(
-                  Icons.chevron_left,
-                  color: Color(0xFF257FCE),
-                  size: 28,
+      canPop: !isLoading, // Prevent back during loading
+      child: LoadingOverlay(
+        isLoading: isLoading,
+        message: _isGoogleLoading ? 'Signing in with Google...' : 'Logging in...',
+        child: Scaffold(
+          backgroundColor: const Color(0xFFE8E8E8),
+          appBar: AppBar(
+            automaticallyImplyLeading: false,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            leading: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: GestureDetector(
+                onTap: isLoading ? null : () => Navigator.pop(context),
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF257FCE).withOpacity(0.1),
+                  ),
+                  child: Icon(
+                    Icons.chevron_left,
+                    color: isLoading ? Colors.grey : const Color(0xFF257FCE),
+                    size: 28,
+                  ),
                 ),
               ),
             ),
           ),
-        ),
-        body: SafeArea(
+          body: SafeArea(
           child: Center(
             child: Container(
               margin: const EdgeInsets.all(20),
@@ -148,15 +154,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         height: 50,
                         child: OutlinedButton.icon(
                           onPressed:
-                              _isGoogleLoading ? null : _signInWithGoogle,
-                          icon: _isGoogleLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : Image.network(
+                              isLoading ? null : _signInWithGoogle,
+                          icon: Image.network(
                                   'https://www.google.com/favicon.ico',
                                   width: 20,
                                   height: 20,
@@ -164,17 +163,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                       const Icon(Icons.g_mobiledata, size: 24),
                                 ),
                           label: Text(
-                            _isGoogleLoading
-                                ? 'Signing in...'
-                                : 'Continue with Google',
+                            'Continue with Google',
                             style: GoogleFonts.albertSans(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: Colors.black87,
+                              color: isLoading ? Colors.grey : Colors.black87,
                             ),
                           ),
                           style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.grey),
+                            side: BorderSide(color: isLoading ? Colors.grey[300]! : Colors.grey),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -310,7 +307,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         width: double.infinity,
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: auth.isLoading
+                          onPressed: isLoading
                               ? null
                               : () async {
                                   // Check internet connection first
@@ -349,15 +346,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                 },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF257FCE),
+                            disabledBackgroundColor: const Color(0xFF257FCE).withOpacity(0.6),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
                             elevation: 0,
                           ),
-                          child: auth.isLoading
-                              ? const CircularProgressIndicator(
-                                  color: Colors.white)
-                              : Text(
+                          child: Text(
                                   'LOG IN',
                                   style: GoogleFonts.albertSans(
                                     fontSize: 18,
@@ -372,14 +367,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       // Sign Up Link
                       TextButton(
-                        onPressed: () => Navigator.pushNamed(
+                        onPressed: isLoading ? null : () => Navigator.pushNamed(
                             context, SignupScreen.routeName),
                         child: Text(
                           "Don't have an account? Sign Up",
                           style: GoogleFonts.albertSans(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: Colors.black87,
+                            color: isLoading ? Colors.grey : Colors.black87,
                           ),
                         ),
                       ),
@@ -390,6 +385,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

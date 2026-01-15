@@ -118,7 +118,6 @@ class ClassModel {
     required this.location,
     required this.color,
     required this.alerts,
-    required this.syncWithGoogle,
     required this.isModifiedLocally,
     this.lastSyncedAt,
     this.inviteCode,
@@ -143,7 +142,6 @@ class ClassModel {
   final String location;
   final Color color;
   final List<AlertModel> alerts;
-  final bool syncWithGoogle;
   final bool isModifiedLocally;
   final DateTime? lastSyncedAt;
   final String? inviteCode;
@@ -172,7 +170,6 @@ class ClassModel {
     String? location,
     Color? color,
     List<AlertModel>? alerts,
-    bool? syncWithGoogle,
     bool? isModifiedLocally,
     DateTime? lastSyncedAt,
     String? inviteCode,
@@ -195,7 +192,6 @@ class ClassModel {
       location: location ?? this.location,
       color: color ?? this.color,
       alerts: alerts ?? this.alerts,
-      syncWithGoogle: syncWithGoogle ?? this.syncWithGoogle,
       isModifiedLocally: isModifiedLocally ?? this.isModifiedLocally,
       lastSyncedAt: lastSyncedAt ?? this.lastSyncedAt,
       inviteCode: inviteCode ?? this.inviteCode,
@@ -225,7 +221,6 @@ class ClassModel {
         'location': location,
         'color': color.value,
         'alerts': alerts.map((a) => a.toMap()).toList(),
-        'syncWithGoogle': syncWithGoogle,
         'isModifiedLocally': isModifiedLocally,
         'lastSyncedAt': lastSyncedAt?.toIso8601String(),
         'inviteCode': inviteCode,
@@ -260,7 +255,6 @@ class ClassModel {
               ?.map((e) => AlertModel.fromMap(e as Map<String, dynamic>))
               .toList() ??
           [],
-      syncWithGoogle: map['syncWithGoogle'] as bool? ?? false,
       isModifiedLocally: map['isModifiedLocally'] as bool? ?? false,
       lastSyncedAt: map['lastSyncedAt'] != null
           ? DateTime.tryParse(map['lastSyncedAt'] as String)

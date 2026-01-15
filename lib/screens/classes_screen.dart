@@ -10,6 +10,7 @@ import '../providers/auth_provider.dart';
 import '../providers/class_provider.dart';
 import '../providers/schedule_provider.dart';
 import '../providers/location_provider.dart';
+import '../widgets/loading_overlay.dart';
 import 'add_edit_class_screen.dart';
 import 'add_edit_schedule_screen.dart';
 import 'class_details_screen.dart';
@@ -123,7 +124,22 @@ class _ClassesScreenState extends State<ClassesScreen> with SingleTickerProvider
     final allClasses = [...classes, ...enrolledClasses];
 
     if (classProvider.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const EduSyncLoadingIndicator(size: 50),
+            const SizedBox(height: 16),
+            Text(
+              'Loading classes...',
+              style: GoogleFonts.albertSans(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     if (allClasses.isEmpty) {

@@ -32,33 +32,17 @@ class ClassCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Color indicator with sync badge
-                Stack(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: model.color,
-                      radius: 24,
-                      child: Icon(
-                        model.syncWithGoogle ? Icons.cloud_done : Icons.event,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                    if (model.syncWithGoogle)
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade300,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Text('G', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Colors.black54)),
-                        ),
-                      ),
-                  ],
+                // Color indicator
+                CircleAvatar(
+                  backgroundColor: model.color,
+                  radius: 24,
+                  child: const Icon(
+                    Icons.event,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 ),
+
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -112,25 +96,6 @@ class ClassCard extends StatelessWidget {
                       child: Text(
                         model.instructorOrRoom,
                         style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            // Notes preview
-            if (model.notes.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    const Icon(Icons.note, size: 14, color: AppColors.textSecondary),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        model.notes,
-                        style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),

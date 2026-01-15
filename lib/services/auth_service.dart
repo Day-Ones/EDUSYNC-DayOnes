@@ -6,12 +6,14 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../models/user.dart';
 
 class AuthService {
-  AuthService(this._storage);
+  AuthService(this._storage, {GoogleSignIn? googleSignIn})
+      : _googleSignIn = googleSignIn ?? GoogleSignIn();
+  
   final FlutterSecureStorage _storage;
+  final GoogleSignIn _googleSignIn;
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   static const _keySession = 'auth_session';
   static const _keyUserType = 'auth_user_type';
@@ -277,6 +279,20 @@ class AuthService {
     await _googleSignIn.signOut();
     await _storage.delete(key: _keySession);
     await _storage.delete(key: _keyUserType);
+  }
+
+  /// Update user data
+  Future<void> updateUser(UserModel user) async {
+    try {
+      // Update in Firestore
+      await _firestore.collection('users').doc(user.id).update({
+        'googleAccountEmail': user.googleAccountEmail,
+        'isGoogleCalendarConnected': user.isGoogleCalendarConnected,
+      });
+    } catch (e) {
+      print('Error updating user: $e');
+      // Continue even if Firestore update fails - user data is in memory
+    }
   }
 
   /// Convert Firestore data to UserModel

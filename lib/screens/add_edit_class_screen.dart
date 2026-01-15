@@ -8,6 +8,7 @@ import '../models/user.dart';
 import '../providers/auth_provider.dart';
 import '../providers/class_provider.dart';
 import '../services/campus_cache_service.dart';
+import '../services/schedule_conflict_service.dart';
 import '../theme/app_theme.dart';
 import 'map_search_screen.dart';
 
@@ -32,9 +33,11 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
   final Set<int> _days = {1, 3, 5};
   Color _color = AppColors.classPalette.first;
   bool _alertEnabled = true; // Single toggle for alerts
-  bool _syncToGoogle = true;
-  bool _includeAlerts = true;
   bool _hasConflict = false;
+  
+  // Schedule conflict detection state
+  List<ClassModel> _conflictingClasses = [];
+  bool _hasScheduleConflict = false;
 
   CampusLocationModel? _selectedCampus;
   List<CampusLocationModel> _recentSearches = [];
@@ -53,6 +56,36 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
   Future<void> _loadRecentSearches() async {
     final recent = await _cacheService.getRecentSearches();
     if (mounted) setState(() => _recentSearches = recent);
+  }
+
+  /// Check for schedule conflicts with existing classes
+  void _checkScheduleConflicts() {
+    final auth = context.read<AuthProvider>();
+    final classProvider = context.read<ClassProvider>();
+    final user = auth.user;
+    
+    // Only check for faculty users
+    if (user?.userType != UserType.faculty) {
+      setState(() {
+        _conflictingClasses = [];
+        _hasScheduleConflict = false;
+      });
+      return;
+    }
+
+    // Find conflicts with existing classes
+    final conflicts = ScheduleConflictService.findConflicts(
+      startTime: _start,
+      endTime: _end,
+      daysOfWeek: _days.toList(),
+      existingClasses: classProvider.classes,
+      excludeClassId: _editingClass?.id, // Exclude current class when editing
+    );
+
+    setState(() {
+      _conflictingClasses = conflicts;
+      _hasScheduleConflict = conflicts.isNotEmpty;
+    });
   }
 
   @override
@@ -79,7 +112,11 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
       }
       _alertEnabled =
           args.alerts.isNotEmpty && args.alerts.any((a) => a.isEnabled);
-      _syncToGoogle = args.syncWithGoogle;
+      
+      // Check for schedule conflicts when editing
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkScheduleConflicts();
+      });
     }
   }
 
@@ -104,6 +141,8 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
         _hasConflict = _start.hour > _end.hour ||
             (_start.hour == _end.hour && _start.minute >= _end.minute);
       });
+      // Check for schedule conflicts after time change
+      _checkScheduleConflicts();
     }
   }
 
@@ -259,6 +298,21 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
           const SnackBar(content: Text('Resolve time conflict first')));
       return;
     }
+    
+    // Check for schedule conflicts
+    if (_hasScheduleConflict) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Schedule conflict with ${_conflictingClasses.map((c) => c.name).join(", ")}. Please adjust the time or days.',
+          ),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+    
     if (!_formKey.currentState!.validate()) return;
     if (user == null) return;
     if (_days.isEmpty) {
@@ -293,7 +347,6 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
       location: _location.text,
       color: _color,
       alerts: alerts,
-      syncWithGoogle: _syncToGoogle,
       isModifiedLocally: true,
       lastSyncedAt: null,
       inviteCode: code,
@@ -487,6 +540,64 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                                     Text('End time must be after start time.'))
                           ]),
                         ),
+                      // Schedule conflict warning banner
+                      if (_hasScheduleConflict)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.orange.withOpacity(0.3))),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(children: [
+                                const Icon(Icons.event_busy, color: Colors.orange),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Schedule Conflict Detected',
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.orange[800],
+                                    ),
+                                  ),
+                                ),
+                              ]),
+                              const SizedBox(height: 8),
+                              ..._conflictingClasses.map((conflict) {
+                                final overlappingDays = ScheduleConflictService.getOverlappingDays(
+                                  _days.toList(),
+                                  conflict.daysOfWeek,
+                                );
+                                final dayNames = _formatDaysShort(overlappingDays);
+                                return Padding(
+                                  padding: const EdgeInsets.only(left: 32, bottom: 4),
+                                  child: Text(
+                                    '• ${conflict.name} ($dayNames, ${_formatTimeShort(conflict.startTime)} - ${_formatTimeShort(conflict.endTime)})',
+                                    style: GoogleFonts.albertSans(
+                                      fontSize: 13,
+                                      color: Colors.orange[900],
+                                    ),
+                                  ),
+                                );
+                              }),
+                              const SizedBox(height: 4),
+                              Padding(
+                                padding: const EdgeInsets.only(left: 32),
+                                child: Text(
+                                  'Please adjust the time or days to resolve.',
+                                  style: GoogleFonts.albertSans(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       TextFormField(
                         controller: _name,
                         decoration: const InputDecoration(
@@ -517,8 +628,11 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                           return FilterChip(
                             label: Text(labels[index]),
                             selected: _days.contains(day),
-                            onSelected: (v) => setState(
-                                () => v ? _days.add(day) : _days.remove(day)),
+                            onSelected: (v) {
+                              setState(() => v ? _days.add(day) : _days.remove(day));
+                              // Check for schedule conflicts after day change
+                              _checkScheduleConflicts();
+                            },
                             selectedColor:
                                 const Color(0xFF2196F3).withOpacity(0.2),
                           );
@@ -794,17 +908,6 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
                               : Colors.grey,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      SwitchListTile(
-                          value: _syncToGoogle,
-                          onChanged: (v) => setState(() => _syncToGoogle = v),
-                          title: const Text('Add to Google Calendar')),
-                      CheckboxListTile(
-                          value: _includeAlerts,
-                          onChanged: (v) =>
-                              setState(() => _includeAlerts = v ?? true),
-                          title:
-                              const Text('Include alerts in Google Calendar')),
                       const SizedBox(height: 24),
                       _buildSaveButtons(
                           context, classProvider, user, isFaculty),
@@ -823,6 +926,19 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
     const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final sortedDays = List<int>.from(days)..sort();
     return sortedDays.map((d) => dayNames[d - 1]).join(', ');
+  }
+
+  String _formatDaysShort(List<int> days) {
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final sortedDays = List<int>.from(days)..sort();
+    return sortedDays.map((d) => dayNames[d - 1]).join(', ');
+  }
+
+  String _formatTimeShort(TimeOfDay time) {
+    final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
+    final minute = time.minute.toString().padLeft(2, '0');
+    final period = time.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $period';
   }
 
   void _showColorPickerModal(BuildContext context) {
@@ -921,6 +1037,9 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
 
   Widget _buildSaveButtons(BuildContext context, ClassProvider classProvider,
       UserModel? user, bool isFaculty) {
+    // Disable save button if there are schedule conflicts
+    final canSave = !_hasScheduleConflict && !_hasConflict;
+    
     return Row(
       children: [
         Expanded(
@@ -930,7 +1049,10 @@ class _AddEditClassScreenState extends State<AddEditClassScreen> {
         const SizedBox(width: 12),
         Expanded(
           child: ElevatedButton(
-            onPressed: _saveClass,
+            onPressed: canSave ? _saveClass : null,
+            style: canSave ? null : ElevatedButton.styleFrom(
+              backgroundColor: Colors.grey[300],
+            ),
             child: Text(_isEditing ? 'Update' : 'Save'),
           ),
         ),

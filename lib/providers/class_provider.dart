@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:smart_scheduler/models/class.dart';
 import 'package:smart_scheduler/services/local_db_service.dart';
 import 'package:smart_scheduler/services/firebase_service.dart';
+import 'package:smart_scheduler/services/calendar_service.dart';
 
 class ClassProvider extends ChangeNotifier {
-  ClassProvider(this._dbService, this._firebaseService);
+  ClassProvider(this._dbService, this._firebaseService, [this._calendarService]);
 
   final LocalDbService _dbService;
   final FirebaseService _firebaseService;
+  final CalendarService? _calendarService;
   List<ClassModel> _classes = [];
   List<ClassModel> _enrolledClasses = [];
   bool _loading = false;
@@ -77,9 +79,10 @@ class ClassProvider extends ChangeNotifier {
   }
 
   Future<void> addOrUpdate(ClassModel model) async {
-    final exists = _classes.indexWhere((c) => c.id == model.id);
-    if (exists >= 0) {
-      _classes[exists] = model;
+    final isUpdate = _classes.indexWhere((c) => c.id == model.id) >= 0;
+    
+    if (isUpdate) {
+      _classes[_classes.indexWhere((c) => c.id == model.id)] = model;
       await _dbService.updateClass(model);
     } else {
       _classes.add(model);
@@ -99,9 +102,37 @@ class ClassProvider extends ChangeNotifier {
   }
 
   Future<void> delete(String id) async {
+    // Get the class before deleting
+    final classIndex = _classes.indexWhere((c) => c.id == id);
+    if (classIndex < 0) return; // Class not found
+    
+    final classModel = _classes[classIndex];
+    
+    // Remove from local list first for immediate UI update
     _classes.removeWhere((c) => c.id == id);
-    await _dbService.deleteClass(id);
     notifyListeners();
+    
+    // Delete from local database
+    await _dbService.deleteClass(id);
+    
+    // Delete from Firebase (this also unenrolls all students)
+    try {
+      final isOnline = await _firebaseService.isOnline();
+      if (isOnline) {
+        await _firebaseService.deleteClass(id);
+      }
+    } catch (e) {
+      debugPrint('Error deleting class from Firebase: $e');
+    }
+    
+    // Delete calendar events for this class
+    if (_calendarService != null) {
+      try {
+        await _calendarService!.deleteClassEvents(classModel);
+      } catch (e) {
+        debugPrint('Error deleting calendar events: $e');
+      }
+    }
   }
 
   // Join class with invite code

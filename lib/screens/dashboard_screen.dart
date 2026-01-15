@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../providers/class_provider.dart';
 import '../providers/schedule_provider.dart';
 import '../providers/location_provider.dart';
+import '../widgets/loading_overlay.dart';
 import 'profile_screen.dart';
 import 'classes_screen.dart';
 import 'class_details_screen.dart';
@@ -57,7 +58,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final user = auth.user;
 
     if (user == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const FullScreenLoading(
+        message: 'Loading...',
+        subMessage: 'Please wait while we set things up',
+      );
     }
 
     final allClasses = [...classes, ...enrolledClasses];

@@ -10,6 +10,7 @@ import '../providers/auth_provider.dart';
 import '../providers/class_provider.dart';
 import '../services/faculty_tracking_service.dart';
 import '../services/attendance_time_service.dart';
+import '../widgets/loading_overlay.dart';
 import 'add_edit_class_screen.dart';
 import 'student_list_screen.dart';
 import 'attendance_scanner_screen.dart';
@@ -140,14 +141,15 @@ class _ClassDetailsScreenState extends State<ClassDetailsScreen> {
               icon: const Icon(Icons.more_vert, color: Colors.white),
               onSelected: (value) async {
                 if (value == 'delete') {
+                  final enrolledCount = classModel.enrolledStudentIds.length;
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AlertDialog(
                       title: const Text('Delete Class'),
                       content: Text(
-                        classModel.enrolledStudentIds.isNotEmpty
-                            ? 'This class has ${classModel.enrolledStudentIds.length} enrolled students. Are you sure you want to delete it?'
-                            : 'Are you sure you want to delete this class?',
+                        enrolledCount > 0
+                            ? 'This will:\n• Unenroll all $enrolledCount students\n• Remove calendar events\n• Delete the class permanently\n\nAre you sure?'
+                            : 'This will delete the class and remove any calendar events. Are you sure?',
                       ),
                       actions: [
                         TextButton(
@@ -163,12 +165,38 @@ class _ClassDetailsScreenState extends State<ClassDetailsScreen> {
                     ),
                   );
                   if (confirm == true && context.mounted) {
-                    await classProvider.delete(classModel.id);
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Class deleted')),
-                      );
+                    // Show loading indicator
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      builder: (ctx) => Center(
+                        child: LoadingCard(message: 'Deleting class...'),
+                      ),
+                    );
+                    
+                    try {
+                      await classProvider.delete(classModel.id);
+                      if (context.mounted) {
+                        Navigator.pop(context); // Close loading
+                        Navigator.pop(context); // Go back from details
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(enrolledCount > 0
+                                ? 'Class deleted and $enrolledCount students unenrolled'
+                                : 'Class deleted'),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        Navigator.pop(context); // Close loading
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Error deleting class: $e'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
                     }
                   }
                 }
@@ -337,10 +365,6 @@ class _ClassDetailsScreenState extends State<ClassDetailsScreen> {
                       isFaculty ? 'Room' : 'Instructor',
                       classModel.instructorOrRoom,
                     ),
-                    const SizedBox(height: 12),
-                  ],
-                  if (classModel.notes.isNotEmpty) ...[
-                    _buildInfoRow(Icons.notes, 'Notes', classModel.notes),
                     const SizedBox(height: 12),
                   ],
                 ],

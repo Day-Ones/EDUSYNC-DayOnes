@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import '../models/class.dart';
 import '../providers/auth_provider.dart';
 import '../providers/class_provider.dart';
+import '../services/firebase_service.dart';
+import '../services/schedule_conflict_service.dart';
+import '../widgets/loading_overlay.dart';
 
 class JoinClassScreen extends StatefulWidget {
   const JoinClassScreen({super.key});
@@ -46,6 +50,39 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
     }
 
     final code = _codeController.text.trim().toUpperCase();
+    
+    // First, find the class to check for conflicts
+    final firebaseService = FirebaseService();
+    final classData = await firebaseService.findClassByInviteCode(code);
+    
+    if (classData == null) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Invalid invite code. Please check and try again.';
+      });
+      return;
+    }
+    
+    final newClass = ClassModel.fromMap(classData);
+    
+    // Check for schedule conflicts with enrolled classes
+    final conflicts = ScheduleConflictService.findConflicts(
+      startTime: newClass.startTime,
+      endTime: newClass.endTime,
+      daysOfWeek: newClass.daysOfWeek,
+      existingClasses: classProvider.enrolledClasses,
+    );
+    
+    // If conflicts exist, show warning dialog
+    if (conflicts.isNotEmpty && mounted) {
+      setState(() => _isLoading = false);
+      
+      final shouldProceed = await _showConflictWarningDialog(newClass, conflicts);
+      if (!shouldProceed) return;
+      
+      setState(() => _isLoading = true);
+    }
+    
     final error =
         await classProvider.joinClassWithCode(code, user.id, user.fullName);
 
@@ -65,19 +102,136 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
       Navigator.pop(context, true);
     }
   }
+  
+  /// Show a warning dialog when schedule conflicts are detected
+  Future<bool> _showConflictWarningDialog(ClassModel newClass, List<ClassModel> conflicts) async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber, color: Colors.orange, size: 28),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Schedule Conflict',
+                style: GoogleFonts.poppins(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'This class conflicts with your existing schedule:',
+              style: GoogleFonts.albertSans(fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'New class: ${newClass.name}',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                  Text(
+                    '${_formatDays(newClass.daysOfWeek)}, ${_formatTime(newClass.startTime)} - ${_formatTime(newClass.endTime)}',
+                    style: GoogleFonts.albertSans(
+                      fontSize: 12,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Conflicts with:',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 4),
+            ...conflicts.map((conflict) => Padding(
+              padding: const EdgeInsets.only(left: 8, top: 4),
+              child: Text(
+                '• ${conflict.name} (${_formatDays(conflict.daysOfWeek)}, ${_formatTime(conflict.startTime)} - ${_formatTime(conflict.endTime)})',
+                style: GoogleFonts.albertSans(
+                  fontSize: 12,
+                  color: Colors.grey[700],
+                ),
+              ),
+            )),
+            const SizedBox(height: 16),
+            Text(
+              'Do you still want to join this class?',
+              style: GoogleFonts.albertSans(
+                fontSize: 14,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+            ),
+            child: const Text('Join Anyway', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+  
+  String _formatDays(List<int> days) {
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final sortedDays = List<int>.from(days)..sort();
+    return sortedDays.map((d) => dayNames[d - 1]).join(', ');
+  }
+  
+  String _formatTime(TimeOfDay time) {
+    final hour = time.hour % 12 == 0 ? 12 : time.hour % 12;
+    final minute = time.minute.toString().padLeft(2, '0');
+    final period = time.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:$minute $period';
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Join Class',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+    return LoadingOverlay(
+      isLoading: _isLoading,
+      message: 'Joining class...',
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Join Class',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: const Color(0xFF2196F3),
+          foregroundColor: Colors.white,
         ),
-        backgroundColor: const Color(0xFF2196F3),
-        foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
+        body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(
           key: _formKey,
@@ -207,23 +361,14 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
                 onPressed: _isLoading ? null : _joinClass,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2196F3),
+                  disabledBackgroundColor: const Color(0xFF2196F3).withOpacity(0.6),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : Text(
+                child: Text(
                         'Join Class',
                         style: GoogleFonts.poppins(
                           fontSize: 18,
@@ -276,6 +421,7 @@ class _JoinClassScreenState extends State<JoinClassScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
